@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузить трек - MUTE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="glass-card p-4">
+                <h4 class="mb-4"><i class="bi bi-upload"></i> Загрузить свой трек</h4>
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.artist.label(class="form-label") }}
+                        {{ form.artist(class="form-control") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.genre.label(class="form-label") }}
+                        {{ form.genre(class="form-select") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.audio_file.label(class="form-label") }}
+                        {{ form.audio_file(class="form-control") }}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-neon w-100">
+                        <i class="bi bi-cloud-upload"></i> Загрузить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Главная{% endblock %}
+{% block content %}
+<div class="container">
+
+    <!-- Герой-секция: Неоновая волна -->
+    <div class="row mt-2 mb-5 text-center position-relative">
+        <div class="col-12">
+            <!-- Индикатор Sound On -->
+            <div class="sound-indicator mb-2">
+                <i class="bi bi-volume-up-fill"></i> Sound On
+            </div>
+
+            <!-- Имитация неоновой волны с помощью CSS градиента -->
+            <div class="wave-glow"></div>
+            <div class="wave-line"></div>
+
+            <h2 class="mt-5 fw-light">Your Personalized Sonic Journey Begins.</h2>
+        </div>
+    </div>
+
+    <!-- Сетка с карточками (в точности как на макете) -->
+    <div class="row g-4">
+
+        <!-- 1. FOR YOU (Список твоих треков) -->
+        <div class="col-lg-3 col-md-6">
+            <div class="glass-card p-3">
+                <h5 class="fw-bold mb-1">FOR YOU</h5>
+                <p class="text-index small mb-3">Personalized artistic albums</p>
+
+                <div class="row g-2">
+                    <!-- Показываем первые 4 трека из базы -->
+                    {% for track in tracks[:4] %}
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="track-icon-box mb-1">🎵</div>
+                            <small class="text-truncate d-block" style="font-size: 0.7rem;">{{ track.title }}</small>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center text-muted small">Нет треков</div>
+                    {% endfor %}
+                </div>
+
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-light btn-sm rounded-pill px-4" style="border-color: #00c8ff; color: #00c8ff;">Play Mix</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CURATED JOURNEYS (Просто красивый блок) -->
+        <div class="col-lg-3 col-md-6">
+            <div class="glass-card p-3">
+                <h5 class="fw-bold mb-1">CURATED JOURNEYS</h5>
+                <p class="text-index small mb-3">Beautifully themed playlists</p>
+
+                <div class="d-flex gap-2 mb-3">
+                    <div class="flex-grow-1 gradient-journey-1"></div>
+                    <div class="flex-grow-1 gradient-journey-2"></div>
+                </div>
+                <div class="text-index d-flex align-items-center small mb-2">
+                    <i class="bi bi-person-circle me-2"></i> Curator
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. COMMUNITY BEATS (Лента активности) -->
+        <div class="col-lg-3 col-md-6">
+            <div class="glass-card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="fw-bold mb-0">COMMUNITY BEATS</h5>
+                    <small class="text-primary">Trending</small>
+                </div>
+
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary pb-2">
+                    <i class="bi bi-person-circle fs-5 me-2 text-primary"></i>
+                    <div>
+                        <div class="small fw-bold">User Activity</div>
+                        <div class="text-index small" style="font-size: 0.75rem;">This aesthetic vibe is amazing!</div>
+                        <div class="text-index small"><i class="bi bi-heart"></i> 12</div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-person-circle fs-5 me-2 text-warning"></i>
+                    <div>
+                        <div class="small fw-bold">Dynamic Comments</div>
+                        <div class="text-index small" style="font-size: 0.75rem;">Love the new track!</div>
+                        <div class="text-index small"><i class="bi bi-heart"></i> 8</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ARTIST REVEALS -->
+        <div class="col-lg-3 col-md-6">
+            <div class="glass-card p-3">
+                <h5 class="fw-bold mb-1">ARTIST REVEALS</h5>
+                <p class="text-index small mb-3">Featured new artist spotlight</p>
+
+                <div class="artist-reveal-image mb-2"></div>
+                <div class="small fw-bold">Elara</div>
+                <div class="text-index small">Tour dates: 30 - May 15</div>
+
+                <div class="text-end mt-2">
+                    <button class="btn btn-outline-info btn-sm rounded-pill px-3">Explore</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

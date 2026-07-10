@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль {{ user.username }} - MUTE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            
+            <!-- Шапка профиля -->
+            <div class="glass-card p-4 text-center mb-4">
+                <img src="{{ url_for('static', filename='uploads/' + (user.avatar_url if user.avatar_url else 'avatar/default.png')) }}"
+                     class="rounded-circle mb-3" 
+                     width="120" height="120" 
+                     style="object-fit: cover; border: 3px solid var(--neon-blue);">
+                
+                <h2 class="mb-1">{{ user.username }}</h2>
+                <p class="text-profile mb-3">
+                    <i class="bi bi-envelope"></i> {{ user.email }}<br>
+                    <small>На сайте с: {{ user.created_at.strftime('%d.%m.%Y') }}</small>
+                    {% if user.role == 'admin' %}
+                        <span class="badge bg-warning text-dark ms-2">Администратор</span>
+                    {% endif %}
+                </p>
+                
+                <!-- Если это свой профиль, показываем кнопку настроек -->
+                {% if current_user.is_authenticated and current_user.id == user.id %}
+                    <a href="{{ url_for('settings') }}" class="btn btn-neon btn-sm">
+                        <i class="bi bi-gear"></i> Настройки
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Список треков пользователя -->
+            <h4 class="mb-3"><i class="bi bi-music-note-list"></i> Треки {{ user.username }}</h4>
+            
+            <div class="row g-3">
+                {% for track in tracks %}
+                <div class="col-md-6">
+                    <div class="glass-card p-3 d-flex align-items-center">
+                        <div class="me-3" style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                            🎵
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 fw-bold">{{ track.title }}</h6>
+                            <small class="text-profile">{{ track.artist }} • {{ track.genre }}</small>
+                        </div>
+                        <a href="#" class="btn btn-outline-light btn-sm rounded-circle" style="border-color: var(--neon-blue); color: var(--neon-blue);">
+                            <i class="bi bi-play-fill"></i>
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12 text-center text-profile">
+                    <i class="bi bi-music-note-beamed fs-1 d-block mb-2"></i>
+                    У пользователя пока нет загруженных треков.
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

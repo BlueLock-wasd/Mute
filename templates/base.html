@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUTE - {% block title %}Музыкальная платформа{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Подключаем отдельный CSS файл -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <!-- Навигация как на картинке -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">MUTE</a>
+            <div class="d-flex align-items-center gap-3">
+
+                {% if current_user.is_authenticated %}
+                    <div class="nav-icon-wrapper" id="library-icon">
+                        <a href="{{ url_for('user_library', username=current_user.username) }}" class="text-white text-decoration-none nav-icon-btn">
+                            <i class="bi bi-music-note-beamed fs-5"></i>
+                            <span class="nav-icon-text">Моя библиотека</span>
+                        </a>
+                    </div>
+                    <a href="#" class="text-white text-decoration-none"><i class="bi bi-chat-dots fs-5"></i></a>
+                    <a href="#" class="text-white text-decoration-none"><i class="bi bi-bell fs-5"></i></a>
+                    <div class="dropdown">
+                        <a href="#" class="text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                            <img src="{{ url_for('static', filename='uploads/' + (current_user.avatar_url if current_user.avatar_url else 'avatar/default.png')) }}"
+                                 class="rounded-circle" width="32" height="32" style="object-fit: cover; border: 2px solid #333;">
+                        </a>
+                                <ul class="dropdown-menu dropdown-menu-end bg-dark border-secondary">
+                            <li><a class="dropdown-item text-white" href="{{ url_for('profile', username=current_user.username) }}">Профиль</a></li>
+                            <li><a class="dropdown-item text-white" href="{{ url_for('upload_track') }}">Загрузить трек</a></li>
+                            <li><hr class="dropdown-divider border-secondary"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">Выйти</a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm">Войти</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-neon btn-sm">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash сообщения -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show bg-dark text-white border-secondary">
+                        {{ message }}
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Основной контент -->
+    <main class="flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer (нижняя часть как на картинке) -->
+    <div class="container mt-5 mb-4 text-center">
+        
+        <div class="mt-3 text-base small">
+            <a href="#" class="text-base text-decoration-none">About</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- ===== ГЛОБАЛЬНЫЙ МИНИ-ПЛЕЕР (МИНИМАЛИСТИЧНЫЙ) ===== -->
+<div id="global-player" class="global-player hidden">
+    <div class="container">
+        <div class="row align-items-center g-2">
+
+            <!-- 1. Обложка и инфо (слева) -->
+            <div class="col-3 d-flex align-items-center">
+                <div id="player-cover" class="player-cover me-2" style="cursor: pointer;">
+                    <div class="music-icon-box" style="width: 45px; height: 45px; font-size: 18px;">🎵</div>
+                </div>
+                <div class="d-none d-sm-block">
+                    <div id="player-title" class="fw-bold text-truncate" style="cursor: pointer; max-width: 120px; font-size: 0.9rem;">Название</div>
+                    <div id="player-artist" class="text-subdued small text-truncate" style="max-width: 120px; font-size: 0.75rem;">Исполнитель</div>
+                </div>
+            </div>
+
+            <!-- 2. Кнопки управления (центр) -->
+            <div class="col-6 col-sm-5 text-center">
+                <div class="d-flex justify-content-center align-items-center gap-3">
+                    <button id="player-prev" class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.8rem;">
+                        <i class="bi bi-skip-backward-fill"></i>
+                    </button>
+
+                    <button id="player-play" class="btn btn-neon rounded-circle" style="width: 40px; height: 40px; padding: 0; font-size: 1.1rem;">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+
+                    <button id="player-next" class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.8rem;">
+                        <i class="bi bi-skip-forward-fill"></i>
+                    </button>
+                </div>
+
+                <!-- Прогресс-бар (очень тонкий) -->
+                <div class="progress-wrapper mt-1 d-flex align-items-center gap-2">
+                    <span id="player-current-time" class="text-subdued small" style="min-width: 35px; font-size: 0.75rem;">0:00</span>
+                    <input type="range" id="player-progress" class="custom-range" min="0" max="100" value="0" style="flex-grow: 1; height: 4px; background: rgba(255,255,255,0.15);">
+                    <span id="player-duration" class="text-subdued small" style="min-width: 35px; font-size: 0.75rem;">0:00</span>
+                </div>
+            </div>
+
+            <!-- 3. Громкость (скрыта, но функция работает) -->
+            <div class="col-3 col-sm-4 text-end d-none d-md-block">
+                <div class="d-flex align-items-center justify-content-end gap-1">
+                    <i class="bi bi-volume-up-fill text-subdued" style="font-size: 0.9rem;"></i>
+                    <input type="range" id="player-volume" class="custom-range" min="0" max="100" value="70" style="width: 70px; height: 4px; background: rgba(255,255,255,0.15);">
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===== ПОЛНОЭКРАННЫЙ ПЛЕЕР (Выезжает снизу) ===== -->
+<div id="fullscreen-player" class="fullscreen-player hidden">
+    <div class="fullscreen-bg-blur"></div>
+
+    <div class="fullscreen-content">
+        <!-- Кнопка закрытия (свернуть обратно) -->
+        <button id="close-fullscreen" class="btn btn-outline-light rounded-circle position-absolute top-0 end-0 m-4" style="width: 40px; height: 40px; font-size: 1.2rem; z-index: 10;">
+            <i class="bi bi-chevron-down"></i>
+        </button>
+
+        <div class="container-fluid h-100 d-flex align-items-center">
+            <div class="row w-100 justify-content-center">
+
+                <!-- ЛЕВАЯ ЧАСТЬ: Обложка и информация -->
+                <div class="col-lg-5 col-md-6 d-flex flex-column align-items-center justify-content-center">
+                    <div id="fs-cover" class="mb-3" style="width: 250px; height: 250px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                        <div class="music-icon-box w-100 h-100" style="font-size: 60px; border-radius: 20px;">🎵</div>
+                    </div>
+                    <h2 id="fs-title" class="fw-bold mb-1 text-center">Название трека</h2>
+                    <p id="fs-artist" class="text-subdued fs-5 mb-3 text-center">Исполнитель</p>
+
+                    <!-- Тонкая полоса прогресса -->
+                    <div class="w-75 d-flex align-items-center gap-2">
+                        <span id="fs-current-time" class="text-subdued small" style="min-width: 35px;">0:00</span>
+                        <input type="range" id="fs-progress" class="custom-range fs-range" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;">
+                        <span id="fs-duration" class="text-subdued small" style="min-width: 35px;">0:00</span>
+                    </div>
+                </div>
+
+                    <!-- Кнопки управления (под полоской) -->
+                    <div class="mt-3 d-flex justify-content-center gap-3">
+                        <button id="fs-prev" class="btn btn-outline-light rounded-circle" style="width: 50px; height: 50px; font-size: 1.2rem;">
+                            <i class="bi bi-skip-backward-fill"></i>
+                        </button>
+                        <button id="fs-play" class="btn btn-neon rounded-circle" style="width: 60px; height: 60px; font-size: 1rem;">
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button id="fs-next" class="btn btn-outline-light rounded-circle" style="width: 50px; height: 50px; font-size: 1.2rem;">
+                            <i class="bi bi-skip-forward-fill"></i>
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- ПРАВАЯ ЧАСТЬ: ПАНЕЛЬ ОЧЕРЕДИ/СПИСОК (Пока пустая, но зарезервирована) -->
+                <div class="col-lg-5 col-md-6 d-flex flex-column ps-lg-4 mt-4 mt-md-0" style="border-left: 1px solid rgba(255,255,255,0.1);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>Очередь</h5>
+                        <span class="text-subdued small">0 треков</span>
+                    </div>
+
+                    <!-- Здесь будет список треков с возможностью скролла и удаления -->
+                    <div id="queue-list" class="flex-grow-1 overflow-auto" style="max-height: 400px; padding-right: 5px;">
+                        <div class="text-center text-subdued small py-5">
+                            <i class="bi bi-music-note-beamed fs-3 d-block mb-2"></i>
+                            Список прослушивания пуст<br>
+                            Добавьте треки из библиотеки
+                        </div>
+                    </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Скрытый аудио-элемент для проигрывания музыки -->
+<audio id="audio-player" style="display: none;"></audio>
+
+<script>
+    // === ЭЛЕМЕНТЫ ПЛЕЕРА ===
+    const player = document.getElementById('global-player');
+    const audio = document.getElementById('audio-player');
+
+    // Мини-плеер
+    const playBtn = document.getElementById('player-play');
+    const prevBtn = document.getElementById('player-prev');
+    const nextBtn = document.getElementById('player-next');
+    const progress = document.getElementById('player-progress');
+    const currentTime = document.getElementById('player-current-time');
+    const duration = document.getElementById('player-duration');
+    const titleEl = document.getElementById('player-title');
+    const artistEl = document.getElementById('player-artist');
+    const volumeSlider = document.getElementById('player-volume');
+
+    // Большой плеер
+    const fullscreenPlayer = document.getElementById('fullscreen-player');
+    const closeBtn = document.getElementById('close-fullscreen');
+    const fsPlayBtn = document.getElementById('fs-play');
+    const fsPrevBtn = document.getElementById('fs-prev');
+    const fsNextBtn = document.getElementById('fs-next');
+    const fsProgress = document.getElementById('fs-progress');
+
+    // === ОЧЕРЕДЬ ===
+    let queue = [];
+    let currentIndex = 0;
+
+    // === 1. ДОБАВИТЬ ТРЕК В ОЧЕРЕДЬ ===
+   function addToQueue(url, title, artist) {
+    // Не добавляем дубликат, если он уже играет
+    if (queue.length > 0 && queue[currentIndex]?.url === url && !audio.paused) return;
+
+    // Добавляем трек в конец очереди
+    queue.push({ url, title, artist });
+
+    // ЕСЛИ ПЛЕЕР СКРЫТ — ЗАПУСКАЕМ ТРЕК!
+    if (player.classList.contains('hidden')) {
+        currentIndex = queue.length - 1; // Ставим индекс на только что добавленный трек
+        playTrack(queue[currentIndex].url, queue[currentIndex].title, queue[currentIndex].artist);
+    }
+}
+
+    // === 2. ЗАПУСК ТРЕКА (БЕЗ ОЖИДАНИЯ — СРАЗУ) ===
+    function playTrack(url, title, artist) {
+        if (audio.src.includes(url) && !audio.paused) return;
+
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+
+        titleEl.textContent = title;
+        artistEl.textContent = artist;
+        document.getElementById('fs-title').textContent = title;
+        document.getElementById('fs-artist').textContent = artist;
+        player.classList.remove('hidden');
+
+        progress.value = 0;
+        currentTime.textContent = '0:00';
+        duration.textContent = '0:00';
+        document.getElementById('fs-current-time').textContent = '0:00';
+        document.getElementById('fs-duration').textContent = '0:00';
+
+        // Устанавливаем новый источник
+        audio.src = url;
+
+        // ЗАПУСКАЕМ СРАЗУ, без ожидания!
+        audio.play().catch(e => {
+            console.warn('Не удалось запустить сразу, пробуем через 200ms:', e);
+            setTimeout(() => {
+                audio.play().catch(err => console.error('Вторая попытка тоже не удалась:', err));
+            }, 200);
+        });
+        updatePlayBtn(true);
+
+        // Длительность подгрузится позже, обновим когда сможем
+        audio.onloadedmetadata = () => {
+            duration.textContent = formatTime(audio.duration);
+            document.getElementById('fs-duration').textContent = formatTime(audio.duration);
+        };
+    }
+
+    // === 3. СЛЕДУЮЩИЙ / ПРЕДЫДУЩИЙ ===
+    function playNext() {
+        if (queue.length === 0) return;
+        currentIndex = (currentIndex + 1) % queue.length;
+        const next = queue[currentIndex];
+        playTrack(next.url, next.title, next.artist);
+    }
+
+    function playPrev() {
+        if (queue.length === 0) return;
+        currentIndex = (currentIndex - 1 + queue.length) % queue.length;
+        const prev = queue[currentIndex];
+        playTrack(prev.url, prev.title, prev.artist);
+    }
+
+    // === 4. КНОПКИ УПРАВЛЕНИЯ ===
+    function updatePlayBtn(isPlaying) {
+        const icon = isPlaying ? 'bi-pause-fill' : 'bi-play-fill';
+        playBtn.querySelector('i').className = icon;
+        fsPlayBtn.querySelector('i').className = icon;
+    }
+
+    playBtn.addEventListener('click', () => {
+        if (audio.paused) {
+            audio.play();
+            updatePlayBtn(true);
+        } else {
+            audio.pause();
+            updatePlayBtn(false);
+        }
+    });
+    fsPlayBtn.addEventListener('click', () => playBtn.click());
+
+    prevBtn.addEventListener('click', playPrev);
+    nextBtn.addEventListener('click', playNext);
+    fsPrevBtn.addEventListener('click', playPrev);
+    fsNextBtn.addEventListener('click', playNext);
+
+    // === 5. АВТОМАТИЧЕСКИЙ ПЕРЕХОД ===
+    audio.addEventListener('ended', () => {
+        updatePlayBtn(false);
+        setTimeout(playNext, 100);
+    });
+
+    // === 6. ПРОГРЕСС И ПЕРЕМОТКА ===
+    audio.addEventListener('timeupdate', () => {
+        if (audio.duration) {
+            const pct = (audio.currentTime / audio.duration) * 100;
+            progress.value = pct;
+            fsProgress.value = pct;
+            currentTime.textContent = formatTime(audio.currentTime);
+            document.getElementById('fs-current-time').textContent = formatTime(audio.currentTime);
+            duration.textContent = formatTime(audio.duration);
+            document.getElementById('fs-duration').textContent = formatTime(audio.duration);
+        }
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+        duration.textContent = formatTime(audio.duration);
+        document.getElementById('fs-duration').textContent = formatTime(audio.duration);
+    });
+
+    // Перемотка
+    progress.addEventListener('input', () => {
+        if (audio.duration) audio.currentTime = (progress.value / 100) * audio.duration;
+    });
+    fsProgress.addEventListener('input', () => {
+        if (audio.duration) audio.currentTime = (fsProgress.value / 100) * audio.duration;
+    });
+
+    function formatTime(sec) {
+        if (!sec || isNaN(sec)) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    // === 7. ГРОМКОСТЬ ===
+    audio.volume = 0.7;
+    volumeSlider.value = 70;
+    volumeSlider.addEventListener('input', () => {
+        audio.volume = parseInt(volumeSlider.value) / 100;
+    });
+
+    // === 8. БОЛЬШОЙ ПЛЕЕР ===
+    function openFullscreen() {
+        document.getElementById('fs-title').textContent = titleEl.textContent;
+        document.getElementById('fs-artist').textContent = artistEl.textContent;
+        fullscreenPlayer.classList.add('active');
+    }
+    function closeFullscreen() {
+        fullscreenPlayer.classList.remove('active');
+    }
+    closeBtn.addEventListener('click', closeFullscreen);
+    document.getElementById('player-cover').addEventListener('click', openFullscreen);
+    document.getElementById('player-title').addEventListener('click', openFullscreen);
+
+    // ===== ПРОВЕРКА: Сработает ли addToQueue при клике =====
+console.log("✅ JS-скрипт загружен и работает!");
+
+function testClick() {
+    console.log("🟢 Кнопка нажата! addToQueue вызвана.");
+    addToQueue('/static/uploads/test.mp3', 'Тестовый трек', 'Тест');
+}
+</script>
+</body>
+</html>

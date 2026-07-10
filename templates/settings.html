@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки - MUTE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="glass-card p-4">
+                <h4 class="mb-4"><i class="bi bi-gear"></i> Настройки профиля</h4>
+                
+                <!-- Смена аватара -->
+                <h6 class="mb-3">Сменить аватар</h6>
+                <form action="{{ url_for('upload_avatar') }}" method="POST" enctype="multipart/form-data" class="mb-4">
+                    <div class="mb-3">
+                        <input type="file" name="avatar" class="form-control" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-neon w-100">
+                        <i class="bi bi-upload"></i> Загрузить аватар
+                    </button>
+                </form>
+                
+                <hr class="border-secondary">
+                
+                <!-- Ссылка на профиль -->
+                <div class="text-center">
+                    <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-outline-light w-100">
+                        <i class="bi bi-person"></i> Перейти в мой профиль
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

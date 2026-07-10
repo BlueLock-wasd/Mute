@@ -1,0 +1,426 @@
+/* ===== ЦВЕТОВАЯ ПАЛИТРА (Dark Theme) ===== */
+:root {
+    --bg-dark: #0b1026;
+    --bg-card: rgba(30, 40, 70, 0.4);
+    --neon-blue: #00c8ff;
+    --neon-pink: #ff00e4;
+    --text-main: #ffffff;
+    --text-muted: #a0a5b9;
+}
+
+/* ===== ГЛОБАЛЬНЫЕ СТИЛИ ===== */
+body {
+    background-color: var(--bg-dark);
+    background-image: radial-gradient(circle at 50% 0%, #1a2340 0%, #0b1026 60%);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+}
+
+/* ===== НАВИГАЦИЯ ===== */
+.navbar-custom {
+    background: transparent !important;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+}
+.navbar-custom .navbar-brand {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: white;
+}
+.navbar-custom .nav-link {
+    color: var(--text-muted) !important;
+    font-size: 0.9rem;
+}
+.navbar-custom .nav-link:hover {
+    color: white !important;
+}
+
+/* ===== КАРТОЧКИ (Эффект стекла) ===== */
+.glass-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    color: white;
+    height: 100%;
+}
+.glass-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(0, 200, 255, 0.15);
+    border-color: rgba(0, 200, 255, 0.3);
+}
+
+.mini-cover {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 12px;
+}
+.artist-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 8px;
+}
+
+/* ===== КНОПКИ ===== */
+.btn-neon {
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 50px;
+    padding: 8px 24px;
+    transition: all 0.3s;
+}
+.btn-neon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 200, 255, 0.5);
+    color: white;
+}
+
+/* ===== ФОРМЫ ===== */
+.form-control, .form-select {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+}
+.form-control:focus, .form-select:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 0 0.25rem rgba(0, 200, 255, 0.25);
+    color: white;
+}
+.form-control::placeholder {
+    color: var(--text-muted);
+}
+.form-label {
+    color: var(--text-muted);
+}
+
+/* ===== ИНДИКАТОР "SOUND ON" ===== */
+.sound-indicator {
+    color: #198754; /* Bootstrap success green */
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+/* ===== НЕОНОВАЯ ВОЛНА НА ГЛАВНОЙ ===== */
+.wave-glow {
+    height: 120px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, #00c8ff, #ff00e4, #00c8ff, transparent);
+    filter: blur(15px) brightness(1.5);
+    border-radius: 50%;
+    margin: 20px 0;
+    opacity: 0.8;
+}
+.wave-line {
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, #00c8ff, #ff00e4, #00c8ff, transparent);
+    margin-top: -90px;
+    border-radius: 100%;
+    box-shadow: 0 0 30px rgba(0, 200, 255, 0.6);
+}
+
+/* ===== ИГРОВЫЕ БЛОКИ НА ГЛАВНОЙ ===== */
+.track-icon-box {
+    height: 60px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background-color: #6c757d; /* Bootstrap secondary */
+    border-radius: 0.25rem;
+}
+.gradient-journey-1 {
+    height: 80px;
+    background: linear-gradient(45deg, #0f2027, #203a43);
+    border-radius: 0.25rem;
+}
+.gradient-journey-2 {
+    height: 80px;
+    background: linear-gradient(45deg, #1a2980, #26d0ce);
+    border-radius: 0.25rem;
+}
+.artist-reveal-image {
+    height: 100px;
+    background: url('https://images.unsplash.com/photo-1514525253440-b393452e6fc6?w=400&h=200&fit=crop') center/cover;
+    border-radius: 0.25rem;
+}
+
+/* ===== МУЗЫКАЛЬНЫЙ ПЛЕЕР (для профиля и библиотеки) ===== */
+.music-icon-box {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+.btn-play-circle {
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+    border-radius: 50%;
+}
+
+/* ===== АДАПТИВНОСТЬ (мобильные устройства) ===== */
+@media (max-width: 768px) {
+    .navbar-custom .navbar-brand {
+        font-size: 1.4rem;
+    }
+    .glass-card {
+        padding: 1rem !important;
+    }
+}
+
+
+/* ===== НОВЫЙ СТИЛЬ ДЛЯ ИКОНОК С ВЫЕЗЖАЮЩИМ ТЕКСТОМ ===== */
+
+/* Обёртка для иконки */
+.nav-icon-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+/* Сама кнопка-иконка */
+.nav-icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 40px;  /* Скрываем текст, оставляя только иконку */
+    text-decoration: none !important;
+}
+
+/* Текст внутри (скрыт по умолчанию) */
+.nav-icon-text {
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: white;
+}
+
+/* ===== ЭФФЕКТ ПРИ НАВЕДЕНИИ ===== */
+
+.nav-icon-wrapper:hover .nav-icon-btn {
+    max-width: 200px;  /* Расширяем кнопку */
+    background: rgba(255, 255, 255, 0.15);
+    padding-right: 20px;
+    box-shadow: 0 0 15px rgba(0, 200, 255, 0.2);
+}
+
+.nav-icon-wrapper:hover .nav-icon-text {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+/* Класс, который добавляет JS при наведении */
+.nav-icon-btn.hover-active {
+    max-width: 200px;
+    background: rgba(255, 255, 255, 0.15);
+    padding-right: 20px;
+    box-shadow: 0 0 15px rgba(0, 200, 255, 0.2);
+}
+.nav-icon-btn.hover-active .nav-icon-text {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+/* ===== ТАБЛИЦЫ ===== */
+.table-dark {
+    --bs-table-bg: transparent;
+    --bs-table-color: white;
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+}
+
+.table-dark tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+
+/* ===== УЛУЧШЕНИЯ ДЛЯ ТАБЛИЦЫ БИБЛИОТЕКИ ===== */
+
+.play-btn-track {
+    transition: all 0.2s ease;
+}
+.play-btn-track:hover {
+    color: white !important;
+    transform: scale(1.1);
+    text-shadow: 0 0 15px rgba(0, 200, 255, 0.5);
+}
+
+.drag-handle:hover {
+    color: white !important;
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+
+/* ===== ГЛОБАЛЬНЫЙ ПЛЕЕР (НИЖНИЙ) ===== */
+.global-player {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(11, 16, 38, 0.95);
+    backdrop-filter: blur(15px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 0;
+    z-index: 1050;
+    transition: transform 0.3s ease;
+}
+.global-player.hidden {
+    transform: translateY(100%);
+}
+
+/* ===== ПОЛНОЭКРАННЫЙ ПЛЕЕР ===== */
+.fullscreen-player {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2000;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fullscreen-player.active {
+    pointer-events: all;
+    opacity: 1;
+    transform: translateY(0);
+}
+.fullscreen-bg-blur {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(11, 16, 38, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+.fullscreen-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===== КАСТОМНЫЙ ПОЛЗУНОК ===== */
+.custom-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+}
+.custom-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--neon-blue);
+    cursor: pointer;
+}
+.custom-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--neon-blue);
+    cursor: pointer;
+}
+.fs-range {
+    height: 4px !important;
+    border-radius: 2px;
+}
+.fs-range::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+}
+
+
+/* ===== ОЧЕРЕДЬ (ПРАВАЯ ПАНЕЛЬ) ===== */
+#queue-list::-webkit-scrollbar {
+    width: 4px;
+}
+#queue-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+#queue-list::-webkit-scrollbar-thumb {
+    background: var(--neon-blue);
+    border-radius: 4px;
+}
+#queue-list::-webkit-scrollbar-thumb:hover {
+    background: #00a3cc;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.queue-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+.queue-item .queue-title {
+    font-weight: 500;
+}
+.queue-item .queue-artist {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.queue-item .queue-delete {
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #ff4444;
+    cursor: pointer;
+    margin-left: auto;
+}
+.queue-item:hover .queue-delete {
+    opacity: 1;
+}
+
+
+/* ====== Авторские стили ====== */
+.text-index{
+    border-color: var(--neon-blue); !important;
+    color: var(--neon-blue); !important;
+    border-radius: 50%; !important;
+}
