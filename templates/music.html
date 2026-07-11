@@ -15,6 +15,10 @@
         {% for track in tracks %}
         <div class="col-md-4">
             <div class="glass-card p-3 h-100">
+                <div class="glass-card p-3 h-100"
+                 data-track-url="/static/{{ track.file_path }}"
+                 data-track-title="{{ track.title }}"
+                 data-track-artist="{{ track.artist }}">
                 <div class="d-flex align-items-center mb-3">
                     <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 15px;">
                         🎵
@@ -52,23 +56,4 @@
         {% endfor %}
     </div>
 </div>
-<script>
-    // При загрузке страницы закидываем ВСЕ треки в очередь
-document.addEventListener('DOMContentLoaded', function() {
-    if (queue.length === 0) {
-        const allTracks = [
-            {% for track in tracks %}
-            {
-                url: '/static/{{ track.file_path }}',
-                title: "{{ track.title }}",
-                artist: "{{ track.artist }}"
-            },
-            {% endfor %}
-        ];
-
-        queue = allTracks;
-        // УДАЛИЛИ БЛОК С АВТОЗАПУСКОМ — ТЕПЕРЬ ОЧЕРЕДЬ ЖДЁТ ТВОЕГО КЛИКА
-    }
-});
-</script>
 {% endblock %}

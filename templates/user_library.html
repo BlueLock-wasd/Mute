@@ -76,32 +76,36 @@
                         </thead>
                         <tbody>
                             {% for track in tracks %}
-                            <tr style="transition: background 0.2s; cursor: default; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                <td class="text-subdued">{{ loop.index }}</td>
+                           <tr style="transition: background 0.2s; cursor: default; border-bottom: 1px solid rgba(255,255,255,0.05);"
+                            data-track-url="/static/{{ track.file_path }}"
+                            data-track-title="{{ track.title }}"
+                            data-track-artist="{{ track.artist }}">
 
-                                <!-- КНОПКА ПЛЕЙ -->
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-light rounded-circle" style="border-color: var(--neon-blue); color: var(--neon-blue); width: 35px; height: 35px; padding: 0;"
-                                            onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}')">
-                                        <i class="bi bi-play-fill" style="font-size: 1.2rem;"></i>
-                                    </button>
-                                </td>
+                            <td class="text-subdued">{{ loop.index }}</td>
+                                
+                            <!-- КНОПКА ПЛЕЙ -->
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-light rounded-circle" style="border-color: var(--neon-blue); color: var(--neon-blue); width: 35px; height: 35px; padding: 0;"
+                                        onclick="addToQueue('{{ url_for('static', filename=track.file_path) }}', '{{ track.title }}', '{{ track.artist }}')">
+                                    <i class="bi bi-play-fill" style="font-size: 1.2rem;"></i>
+                                </button>
+                            </td>
 
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <span class="fw-bold">{{ track.title }}</span>
-                                    </div>
-                                </td>
-                                <td class="text-subdued">{{ track.artist }}</td>
-                                <td class="text-end text-subdued" style="font-size: 0.8rem;">03:45</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="fw-bold">{{ track.title }}</span>
+                                </div>
+                            </td>
+                            <td class="text-subdued">{{ track.artist }}</td>
+                            <td class="text-end text-subdued" style="font-size: 0.8rem;">03:45</td>
 
-                                <!-- КНОПКА ПЕРЕТАСКИВАНИЯ (DRAG) -->
-                                <td class="text-center">
-                                    <span class="drag-handle" style="cursor: grab; color: var(--text-muted); font-size: 1.2rem;">
-                                        <i class="bi bi-grip-vertical"></i>
-                                    </span>
-                                </td>
-                            </tr>
+                            <!-- DRAG HANDLE -->
+                            <td class="text-center">
+                                <span class="drag-handle" style="cursor: grab; color: var(--text-muted); font-size: 1.2rem;">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </span>
+                            </td>
+                        </tr>
                             {% else %}
                             <tr>
                                 <td colspan="6" class="text-center text-subdued py-4">
@@ -120,22 +124,6 @@
 
 </div>
 <script>
-    // При загрузке страницы закидываем ВСЕ треки в очередь
-document.addEventListener('DOMContentLoaded', function() {
-    if (queue.length === 0) {
-        const allTracks = [
-            {% for track in tracks %}
-            {
-                url: '/static/{{ track.file_path }}',
-                title: "{{ track.title }}",
-                artist: "{{ track.artist }}"
-            },
-            {% endfor %}
-        ];
 
-        queue = allTracks;
-        // УДАЛИЛИ БЛОК С АВТОЗАПУСКОМ — ТЕПЕРЬ ОЧЕРЕДЬ ЖДЁТ ТВОЕГО КЛИКА
-    }
-});
 </script>
 {% endblock %}

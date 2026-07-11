@@ -25,10 +25,10 @@ def load_user(user_id):
 
 @app.route('/')
 def index():
-    # Берем последние 6 треков из базы
     tracks = Track.query.order_by(Track.uploaded_at.desc()).limit(10).all()
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render_template('index.html', tracks=tracks)
     return render_template('index.html', tracks=tracks)
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
