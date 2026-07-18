@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, send_from_directory, session
+from flask import Flask, render_template, redirect, url_for, flash, request, send_from_directory, session, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -160,9 +160,37 @@ def upload_avatar():
 
     return redirect(url_for('settings'))
 
+
 @app.route('/static/uploads/<path:filename>')
 def serve_upload(filename):
     return send_from_directory('static/uploads', filename)
+
+
+@app.route('/api/delete_track/<int:track_id>', methods=['DELETE'])
+@login_required
+def delete_track(track_id):
+    track = Track.query.get_or_404(track_id)
+
+    # Проверяем права: только владелец или админ может удалить
+    if track.user_id != current_user.id and current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'У вас нет прав для удаления этого трека'}), 403
+
+    # Удаляем файл с диска (если он существует)
+    try:
+        file_path = os.path.join(app.root_path, 'static', track.file_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        print(f"Ошибка при удалении файла: {e}")
+        # Продолжаем, даже если файл не удалился
+
+    # Удаляем запись из базы данных
+    db.session.delete(track)
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Трек успешно удалён'})
+
+
 @app.route('/logout')
 @login_required
 def logout():

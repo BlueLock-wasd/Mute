@@ -418,6 +418,14 @@ body {
 }
 
 
+/* ===== ВИЗУАЛИЗАТОР ===== */
+#visualizerCanvas {
+    display: block;
+    margin: 0 auto;
+    background: transparent;
+}
+
+
 /* ====== Авторские стили ====== */
 .text-index{
     border-color: var(--neon-blue); !important;

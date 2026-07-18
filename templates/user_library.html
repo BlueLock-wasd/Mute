@@ -71,6 +71,7 @@
                                 <th scope="col">Song Title</th>
                                 <th scope="col">Artist</th>
                                 <th scope="col" class="text-end">Duration</th>
+                                <th scope="col" style="width: 40px;"></th>
                                 <th scope="col" style="width: 40px;"></th> <!-- Колонка для Drag Handle -->
                             </tr>
                         </thead>
@@ -98,6 +99,14 @@
                             </td>
                             <td class="text-subdued">{{ track.artist }}</td>
                             <td class="text-end text-subdued" style="font-size: 0.8rem;">03:45</td>
+
+                               <!-- НОВАЯ КНОПКА УДАЛЕНИЯ -->
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger rounded-circle" style="width: 30px; height: 30px; padding: 0; border: none; background: transparent; color: #ff4444;"
+                                        onclick="deleteTrack({{ track.id }}, '{{ track.title }}')">
+                                    <i class="bi bi-trash" style="font-size: 1.1rem;"></i>
+                                </button>
+                            </td>
 
                             <!-- DRAG HANDLE -->
                             <td class="text-center">

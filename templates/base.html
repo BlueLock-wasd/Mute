@@ -227,37 +227,52 @@ function addToQueue(url, title, artist) {
 }
 
         // === 2. ЗАПУСК ТРЕКА ===
-        function playTrack(url, title, artist) {
-            if (audio.src.includes(url) && !audio.paused) return;
-            audio.pause();
-            audio.removeAttribute('src');
-            audio.load();
+function playTrack(url, title, artist) {
+    if (audio.src.includes(url) && !audio.paused) return;
 
-            titleEl.textContent = title;
-            artistEl.textContent = artist;
-            document.getElementById('fs-title').textContent = title;
-            document.getElementById('fs-artist').textContent = artist;
-            player.classList.remove('hidden');
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
 
-            progress.value = 0;
-            currentTime.textContent = '0:00';
-            duration.textContent = '0:00';
-            document.getElementById('fs-current-time').textContent = '0:00';
-            document.getElementById('fs-duration').textContent = '0:00';
+    titleEl.textContent = title;
+    artistEl.textContent = artist;
+    document.getElementById('fs-title').textContent = title;
+    document.getElementById('fs-artist').textContent = artist;
+    player.classList.remove('hidden');
 
-            audio.src = url;
-            audio.play().catch(e => {
+    progress.value = 0;
+    currentTime.textContent = '0:00';
+    duration.textContent = '0:00';
+    document.getElementById('fs-current-time').textContent = '0:00';
+    document.getElementById('fs-duration').textContent = '0:00';
+
+    audio.src = url;
+
+    // ЗАПУСКАЕМ БЕЗ ЛИШНИХ ПРОВЕРОК
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+        playPromise
+            .then(() => {
+                updatePlayBtn(true);
+                console.log('▶ Трек запущен:', title);
+            })
+            .catch(() => {
+                // Если сразу не получилось — перезагружаем и пробуем ещё раз
                 setTimeout(() => {
-                    audio.play().catch(err => console.error('Retry failed:', err));
-                }, 200);
+                    audio.load();
+                    audio.play()
+                        .then(() => updatePlayBtn(true))
+                        .catch(err => console.error('Не удалось запустить даже после перезагрузки:', err));
+                }, 300);
             });
-            updatePlayBtn(true);
+    }
 
-            audio.onloadedmetadata = () => {
-                duration.textContent = formatTime(audio.duration);
-                document.getElementById('fs-duration').textContent = formatTime(audio.duration);
-            };
-        }
+    audio.onloadedmetadata = () => {
+        duration.textContent = formatTime(audio.duration);
+        document.getElementById('fs-duration').textContent = formatTime(audio.duration);
+    };
+}
 
         // === 3. ПЕРЕКЛЮЧЕНИЕ ===
         function playNext() {
@@ -354,6 +369,41 @@ function addToQueue(url, title, artist) {
         document.getElementById('player-cover').addEventListener('click', openFullscreen);
         document.getElementById('player-title').addEventListener('click', openFullscreen);
 
+        // ===== УДАЛЕНИЕ ТРЕКА ИЗ БИБЛИОТЕКИ =====
+        function deleteTrack(trackId, trackTitle) {
+            if (!confirm(`Вы уверены, что хотите удалить трек "${trackTitle}"?`)) {
+                return;
+            }
+
+            fetch(`/api/delete_track/${trackId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Если статус не 200-299, выбрасываем ошибку с кодом
+                    throw new Error(`Ошибка сервера: ${response.status} ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Трек успешно удалён!');
+                    location.reload();
+                } else {
+                    alert('❌ Ошибка при удалении: ' + (data.message || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                console.error('=== ПОЛНАЯ ОШИБКА ===');
+                console.error(error);
+                alert('Ошибка: ' + error.message + '\n\nПодробности смотрите в консоли (F12 → Console)');
+            });
+        }
+
         // ==========================================
         // ===== SPA (ПЕРЕХОД БЕЗ ПЕРЕЗАГРУЗКИ) =====
         // ==========================================
@@ -373,9 +423,19 @@ function addToQueue(url, title, artist) {
                 const newContent = doc.getElementById('main-content');
 
                 if (newContent) {
-                    mainContent.innerHTML = newContent.innerHTML;
-                    window.history.pushState({}, '', url);
+                mainContent.innerHTML = newContent.innerHTML;
+                window.history.pushState({}, '', url);
+
+                // ===== ЕСЛИ МЫ НА ГЛАВНОЙ — ЗАПУСКАЕМ ВИЗУАЛИЗАТОР =====
+                if (url === '/' || url === window.location.origin + '/') {
+                    setTimeout(() => {
+                        // Если аудио уже играет — сразу запускаем
+                        if (audio.src && !audio.paused) {
+                            initVisualizer();
+                        }
+                    }, 300); // небольшая задержка, чтобы DOM обновился
                 }
+            }
             } catch (error) {
                 console.error('Ошибка загрузки страницы:', error);
                 window.location.href = url;
@@ -416,6 +476,157 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+
+
+// ===== АУДИО-ВИЗУАЛИЗАТОР (ГЛАВНАЯ СТРАНИЦА) - ФИНАЛЬНАЯ ВЕРСИЯ =====
+let audioCtx = null;
+let analyser = null;
+let dataArray = null;
+let isVisualizerInitialized = false;
+
+// Создаём контекст и анализатор только один раз при клике
+function initAudioContext() {
+    if (audioCtx) return audioCtx;
+
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        return audioCtx;
+    } catch (e) {
+        console.warn('Не удалось создать AudioContext:', e);
+        return null;
+    }
+}
+
+// Подключаем источник (только один раз)
+function connectSource() {
+    if (!audioCtx || !analyser) return false;
+    try {
+        // Пытаемся создать MediaElementSource
+        const source = audioCtx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        return true;
+    } catch (e) {
+        // Если уже подключён — пропускаем
+        return false;
+    }
+}
+
+function initVisualizer() {
+    if (isVisualizerInitialized || !audio.src) return;
+
+    // Если контекст не создан — не запускаем визуализатор
+    if (!audioCtx) return;
+
+    // Если контекст спит — будим
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    isVisualizerInitialized = true;
+    drawVisualizer();
+}
+
+function drawVisualizer() {
+    if (!isVisualizerInitialized) return;
+
+    const canvas = document.getElementById('visualizerCanvas');
+    if (!canvas) {
+        requestAnimationFrame(drawVisualizer);
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+
+    if (!analyser) {
+        requestAnimationFrame(drawVisualizer);
+        return;
+    }
+
+    analyser.getByteFrequencyData(dataArray);
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Сглаживание
+    const smoothData = new Uint8Array(dataArray.length);
+    for (let i = 0; i < dataArray.length; i++) {
+        if (i === 0) smoothData[i] = dataArray[i];
+        else smoothData[i] = dataArray[i] * 0.5 + smoothData[i - 1] * 0.5;
+    }
+
+    const bass = smoothData.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
+    const intensity = 0.3 + (bass / 255) * 0.7;
+
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, '#00c8ff');
+    gradient.addColorStop(0.5, '#ff00e4');
+    gradient.addColorStop(1, '#00c8ff');
+
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 6 + intensity * 14;
+    ctx.shadowBlur = 20 + intensity * 40;
+    ctx.shadowColor = '#00c8ff';
+
+    const midY = height / 2;
+    const time = Date.now() / 1200;
+
+    ctx.beginPath();
+    ctx.moveTo(0, midY);
+
+    for (let x = 0; x <= width; x += 4) {
+        const idx = Math.floor((x / width) * smoothData.length);
+        const val = smoothData[idx] / 255;
+        const y = midY + Math.sin(x * 0.02 + time) * (15 + val * 60 * intensity);
+        ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+
+    requestAnimationFrame(drawVisualizer);
+}
+
+// ===== ПРИНУДИТЕЛЬНАЯ АКТИВАЦИЯ ПО КЛИКУ (только первый раз) =====
+let isContextInitialized = false;
+
+document.addEventListener('click', function firstClickActivation() {
+    if (!isContextInitialized) {
+        // 1. Создаём контекст
+        if (initAudioContext()) {
+            // 2. Подключаем источник (один раз навсегда)
+            connectSource();
+            isContextInitialized = true;
+            // 3. Если музыка уже играет — запускаем визуализатор
+            if (audio.src && !audio.paused) {
+                initVisualizer();
+            }
+        }
+        document.removeEventListener('click', firstClickActivation);
+    }
+}, { once: true });
+
+// Если музыка уже играет при загрузке страницы
+if (audio.src && !audio.paused) {
+    // Пытаемся создать контекст сразу (если он ещё не создан по клику)
+    if (!audioCtx) {
+        if (initAudioContext()) {
+            connectSource();
+            isContextInitialized = true;
+            initVisualizer();
+        }
+    } else {
+        initVisualizer();
+    }
+}
+
     </script>
 </body>
 </html>
