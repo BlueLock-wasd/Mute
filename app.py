@@ -1,22 +1,40 @@
+from email.mime import audio
+
 from flask import Flask, render_template, redirect, url_for, flash, request, send_from_directory, session, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from datetime import datetime, timezone, timedelta
 import os
+
 
 from config import Config
 from models import db, User, Track
 from forms import LoginForm, RegisterForm, UploadTrackForm
+import random
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-
 db.init_app(app)
-
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+ALLOWED_AUDIO = {'mp3', 'wav'}
+ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'gif'}
+
+
+def get_random_default_cover():
+    default_folder = os.path.join(app.root_path, 'static/images/covers_default')
+    default_covers = [f for f in os.listdir(default_folder)
+                      if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+
+    if default_covers:
+        return f'images/covers_default/{random.choice(default_covers)}'
+    else:
+        return 'images/default/defaul_0.jpg'
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -29,6 +47,7 @@ def index():
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('index.html', tracks=tracks)
     return render_template('index.html', tracks=tracks)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -103,34 +122,60 @@ def upload_track():
     form = UploadTrackForm()
 
     if form.validate_on_submit():
-        file = form.audio_file.data
+        audio_file = form.audio_file.data
+        cover_file = form.cover_file.data
 
-        # Проверка на существование
-        if file and (file.filename.rsplit('.', 1)[1].lower() in {'mp3', 'wav'}):
-            # Генерируем безопасное имя для файла
-            filename = secure_filename(file.filename)
+        # === 1. Обработка аудиофайла ===
+        if audio_file and audio_file.filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO:
+            filename = secure_filename(audio_file.filename)
+            moskow_zone = timezone(timedelta(hours=3))
+            timestamp = datetime.now(moskow_zone).strftime('%Y%m%d_%H%M%S')
+            filename = f'{timestamp}_{filename}'
 
             upload_folder = os.path.join(app.root_path, 'static/uploads')
             os.makedirs(upload_folder, exist_ok=True)
-
-            file.save(os.path.join(upload_folder, filename))
-
-            new_track = Track(
-                title=form.title.data,
-                artist=form.artist.data,
-                genre=form.genre.data,
-                file_path='uploads/' + filename,
-                author=current_user
-            )
-            db.session.add(new_track)
-            db.session.commit()
-
-            flash('Трек успешно загружен!', 'success')
-            return redirect(url_for('music_library'))
+            audio_file.save(os.path.join(upload_folder, filename))
         else:
-            flash('Пожалуйста, загрузите файт в формате MP3 или Wav', 'danger')
+            flash('Пожалуйста, загрузите файл в формате MP3 или WAV', 'danger')
+            return render_template('upload.html', form=form)
+
+        # === 2. Обработка обложки ===
+        cover_path = None
+        if cover_file and cover_file.filename != '':
+            ext = cover_file.filename.rsplit('.', 1)[1].lower()
+            if ext in ALLOWED_IMAGES:
+                cover_filename = secure_filename(f"{form.title.data}.{ext}")
+                cover_folder = os.path.join(app.root_path, 'static/images/covers_download')
+                os.makedirs(cover_folder, exist_ok=True)
+                cover_file.save(os.path.join(cover_folder, cover_filename))
+                cover_path = f'covers_download/{cover_filename}'
+            else:
+                flash('Обложка должна быть в формате PNG, JPG или GIF (использована случайная)', 'warning')
+                cover_path = get_random_default_cover()
+        else:
+            cover_path = get_random_default_cover()
+
+        # === 3. Сохраняем в базу ===
+        new_track = Track(
+            title=form.title.data,
+            artist=form.artist.data,
+            genre=form.genre.data,
+            file_path=f'uploads/{filename}',  # ← ВЕРНУЛИ СТАРЫЙ ПУТЬ
+            cover_path=cover_path,
+            author=current_user
+        )
+        db.session.add(new_track)
+        db.session.commit()
+
+        flash('Трек успешно загружен!', 'success')
+        return redirect(url_for('music_library'))
 
     return render_template('upload.html', form=form)
+
+
+@app.route('/static/images/covers_download/<path:filename>')
+def serve_upload(filename):
+    return send_from_directory('static/images/covers_download/', filename)
 
 
 @app.route('/upload_avatar', methods=['POST'])
@@ -159,11 +204,6 @@ def upload_avatar():
         flash('Недопустимый формат файла (только PNG, JPG, GIF)', 'danger')
 
     return redirect(url_for('settings'))
-
-
-@app.route('/static/uploads/<path:filename>')
-def serve_upload(filename):
-    return send_from_directory('static/uploads', filename)
 
 
 @app.route('/api/delete_track/<int:track_id>', methods=['DELETE'])

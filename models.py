@@ -1,7 +1,10 @@
+from email.mime import image
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
 
+from sqlalchemy.engine import default
 
 db = SQLAlchemy()
 
@@ -30,6 +33,6 @@ class Track(db.Model):
     artist = db.Column(db.String(100), nullable=False)
     genre = db.Column(db.String(50), nullable=False)
     file_path = db.Column(db.String(255), nullable=False)
-    cover_url = db.Column(db.String(255), default='default_cover.jpg')
+    cover_path = db.Column(db.String(255), default='images/covers_default/default_1.jpg')
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     plays = db.Column(db.Integer, default=0)

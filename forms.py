@@ -26,4 +26,5 @@ class UploadTrackForm(FlaskForm):
         ('Hip-Hop', 'Хип-Хоп')
     ])
     audio_file = FileField('Файл (MP3 или WAV', validators=[FileRequired()])
+    cover_file = FileField('Обложка (PNG/JPG, опционально)')
     submit = SubmitField('Загрузить трек')

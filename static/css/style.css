@@ -427,8 +427,3 @@ body {
 
 
 /* ====== Авторские стили ====== */
-.text-index{
-    border-color: var(--neon-blue); !important;
-    color: var(--neon-blue); !important;
-    border-radius: 50%; !important;
-}

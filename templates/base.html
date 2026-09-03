@@ -41,7 +41,7 @@
                         </ul>
                     </div>
                 {% else %}
-                    <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm">Войти</a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm">Sign In</a>
                     <a href="{{ url_for('register') }}" class="btn btn-neon btn-sm">Sign Up</a>
                 {% endif %}
             </div>
@@ -139,21 +139,22 @@
                         </div>
                     </div>
 
-                    <!-- ПРАВАЯ ЧАСТЬ: ПАНЕЛЬ ОЧЕРЕДИ/СПИСОК -->
-<div class="col-lg-5 col-md-6 d-flex flex-column ps-lg-4 mt-4 mt-md-0" style="border-left: 1px solid rgba(255,255,255,0.1);">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>Очередь</h5>
-        <span class="text-subdued small" id="queue-count">0 треков</span>
-    </div>
 
-    <div id="queue-list" class="flex-grow-1 overflow-auto" style="max-height: 400px; padding-right: 5px;">
-        <div class="text-center text-subdued small py-5">
-            <i class="bi bi-music-note-beamed fs-3 d-block mb-2"></i>
-            Список прослушивания пуст<br>
-            Добавьте треки из библиотеки
-        </div>
-    </div>
-</div>
+                                        <!-- ПРАВАЯ ЧАСТЬ: ПАНЕЛЬ ОЧЕРЕДИ/СПИСОК -->
+                    <div class="col-lg-5 col-md-6 d-flex flex-column ps-lg-4 mt-4 mt-md-0" style="border-left: 1px solid rgba(255,255,255,0.1);">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>Очередь</h5>
+                            <span class="text-subdued small" id="queue-count">0 треков</span>
+                        </div>
+
+                        <div id="queue-list" class="flex-grow-1 overflow-auto" style="max-height: 400px; padding-right: 5px;">
+                            <div class="text-center text-subdued small py-5">
+                                <i class="bi bi-music-note-beamed fs-3 d-block mb-2"></i>
+                                Список прослушивания пуст<br>
+                                Добавьте треки из библиотеки
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="mt-3 d-flex justify-content-center gap-3">
                         <button id="fs-prev" class="btn btn-outline-light rounded-circle" style="width: 50px; height: 50px; font-size: 1.2rem;">
@@ -199,31 +200,37 @@
         let currentIndex = 0;
 
 function addToQueue(url, title, artist) {
-    // Защита от дубликата (если этот трек уже играет)
+    // Если очередь пуста — сначала загружаем все треки со страницы
+    if (queue.length === 0) {
+        const trackCards = document.querySelectorAll('[data-track-url]');
+        if (trackCards.length > 0) {
+            window._autoLoading = true;
+            trackCards.forEach(card => {
+                queue.push({
+                    url: card.dataset.trackUrl,
+                    title: card.dataset.trackTitle,
+                    artist: card.dataset.trackArtist
+                });
+            });
+            window._autoLoading = false;
+        }
+    }
+
+    // Если этот трек уже играет — ничего не делаем
     if (queue.length > 0 && queue[currentIndex]?.url === url && !audio.paused) return;
 
-    // Если это автозагрузка — просто добавляем в конец и выходим
-    if (window._autoLoading) {
-        queue.push({ url, title, artist });
-        return;
-    }
-
-    // === ЕСЛИ ЭТО РУЧНОЙ КЛИК ===
-
-    // Ищем, есть ли уже этот трек в очереди
+    // Если этот трек уже есть в очереди — убираем его
     const existingIndex = queue.findIndex(t => t.url === url);
-
     if (existingIndex !== -1) {
-        // Если уже есть — просто переходим на него
-        currentIndex = existingIndex;
-    } else {
-        // Если нет — добавляем в конец и переходим на него
-        queue.push({ url, title, artist });
-        currentIndex = queue.length - 1;
+        queue.splice(existingIndex, 1);
     }
 
-    // Запускаем трек
-    playTrack(queue[currentIndex].url, queue[currentIndex].title, queue[currentIndex].artist);
+    // Вставляем в начало
+    queue.unshift({ url, title, artist });
+    currentIndex = 0;
+
+    // Запускаем
+    playTrack(url, title, artist);
 }
 
         // === 2. ЗАПУСК ТРЕКА ===
@@ -231,8 +238,7 @@ function playTrack(url, title, artist) {
     if (audio.src.includes(url) && !audio.paused) return;
 
     audio.pause();
-    audio.removeAttribute('src');
-    audio.load();
+    audio.src = url;
 
     titleEl.textContent = title;
     artistEl.textContent = artist;
@@ -260,7 +266,6 @@ function playTrack(url, title, artist) {
             .catch(() => {
                 // Если сразу не получилось — перезагружаем и пробуем ещё раз
                 setTimeout(() => {
-                    audio.load();
                     audio.play()
                         .then(() => updatePlayBtn(true))
                         .catch(err => console.error('Не удалось запустить даже после перезагрузки:', err));
@@ -315,6 +320,10 @@ function playTrack(url, title, artist) {
         audio.addEventListener('ended', () => {
             updatePlayBtn(false);
             setTimeout(playNext, 100);
+        });
+
+        audio.addEventListener('play', () => {
+            initVisualizer();
         });
 
         // === 5. ПРОГРЕСС ===
@@ -410,37 +419,36 @@ function playTrack(url, title, artist) {
 
         const mainContent = document.getElementById('main-content');
 
-        async function loadPage(url) {
-            if (!url || url === window.location.href) return;
+async function loadPage(url) {
+    if (!url || url === window.location.href) return;
 
-            try {
-                const response = await fetch(url, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newContent = doc.getElementById('main-content');
+    try {
+        const response = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newContent = doc.getElementById('main-content');
 
-                if (newContent) {
-                mainContent.innerHTML = newContent.innerHTML;
-                window.history.pushState({}, '', url);
+        if (newContent) {
+            mainContent.innerHTML = newContent.innerHTML;
+            window.history.pushState({}, '', url);
 
-                // ===== ЕСЛИ МЫ НА ГЛАВНОЙ — ЗАПУСКАЕМ ВИЗУАЛИЗАТОР =====
-                if (url === '/' || url === window.location.origin + '/') {
-                    setTimeout(() => {
-                        // Если аудио уже играет — сразу запускаем
-                        if (audio.src && !audio.paused) {
-                            initVisualizer();
-                        }
-                    }, 300); // небольшая задержка, чтобы DOM обновился
-                }
+            // ===== ЗАПУСК ВИЗУАЛИЗАТОРА НА ГЛАВНОЙ =====
+
+            setTimeout(() => {
+                    if (audio.src && !audio.paused) {
+                        initVisualizer();
+                    }
+                }, 300);
             }
-            } catch (error) {
-                console.error('Ошибка загрузки страницы:', error);
-                window.location.href = url;
-            }
-        }
+    } catch (error) {
+        console.error('Ошибка загрузки страницы:', error);
+        window.location.href = url;
+    }
+}
+
 
         window.addEventListener('popstate', () => {
             loadPage(window.location.href);
@@ -456,27 +464,6 @@ function playTrack(url, title, artist) {
         });
 
         console.log('✅ SPA mode enabled — плеер продолжит играть!');
-
-       // ===== АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ОЧЕРЕДИ ПРИ ОТКРЫТИИ СТРАНИЦЫ =====
-document.addEventListener('DOMContentLoaded', function() {
-    // Загружаем очередь, только если она ещё пуста
-    if (queue.length === 0) {
-        const trackCards = document.querySelectorAll('[data-track-url]');
-        if (trackCards.length > 0) {
-            window._autoLoading = true;
-            trackCards.forEach(card => {
-                addToQueue(
-                    card.dataset.trackUrl,
-                    card.dataset.trackTitle,
-                    card.dataset.trackArtist
-                );
-            });
-            window._autoLoading = false;
-            console.log(`✅ Автоматически загружено ${trackCards.length} треков в очередь`);
-        }
-    }
-});
-
 
 
 // ===== АУДИО-ВИЗУАЛИЗАТОР (ГЛАВНАЯ СТРАНИЦА) - ФИНАЛЬНАЯ ВЕРСИЯ =====
@@ -517,18 +504,17 @@ function connectSource() {
 }
 
 function initVisualizer() {
-    if (isVisualizerInitialized || !audio.src) return;
+    if (!document.getElementById('visualizerCanvas')) return;
 
-    // Если контекст не создан — не запускаем визуализатор
+    if (!audioCtx) initAudioContext();
     if (!audioCtx) return;
 
-    // Если контекст спит — будим
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
+    connectSource();
 
-    isVisualizerInitialized = true;
-    drawVisualizer();
+    if (!isVisualizerInitialized) {
+        isVisualizerInitialized = true;
+        drawVisualizer();
+    }
 }
 
 function drawVisualizer() {
@@ -588,7 +574,6 @@ function drawVisualizer() {
         const y = midY + Math.sin(x * 0.02 + time) * (15 + val * 60 * intensity);
         ctx.lineTo(x, y);
     }
-
     ctx.stroke();
 
     requestAnimationFrame(drawVisualizer);

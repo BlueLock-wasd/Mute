@@ -31,6 +31,13 @@
                         {{ form.audio_file(class="form-control") }}
                     </div>
                     
+                    <!-- НОВОЕ ПОЛЕ ДЛЯ ОБЛОЖКИ -->
+                    <div class="mb-3">
+                        {{ form.cover_file.label(class="form-label") }}
+                        {{ form.cover_file(class="form-control") }}
+                        <small class="text-muted">Необязательно. Если не загрузить, будет выбрана случайная обложка.</small>
+                    </div>
+
                     <button type="submit" class="btn btn-neon w-100">
                         <i class="bi bi-cloud-upload"></i> Загрузить
                     </button>
