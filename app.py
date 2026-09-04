@@ -1,10 +1,9 @@
-from email.mime import audio
-
 from flask import Flask, render_template, redirect, url_for, flash, request, send_from_directory, session, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
+from mutagen import File as MutagenFile
 import os
 
 
@@ -39,6 +38,15 @@ def get_random_default_cover():
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+@app.template_filter('format_duration')
+def format_duration(seconds):
+    if not seconds:
+        return '0:00'
+    m = seconds // 60
+    s = seconds % 60
+    return f'{m}:{s:02d}'
 
 
 @app.route('/')
@@ -106,7 +114,7 @@ def profile(username):
 @app.route('/library/<username>')
 def user_library(username):
     user = User.query.filter_by(username=username).first_or_404()
-    tracks = Track.query.filter_by(user_id=user.id).order_by(Track.uploaded_at.desc()).all()
+    tracks = Track.query.filter_by(user_id=user.id).order_by(Track.track_order.asc(), Track.uploaded_at.desc()).all()
     return render_template('user_library.html', user=user, tracks=tracks)
 
 
@@ -125,7 +133,6 @@ def upload_track():
         audio_file = form.audio_file.data
         cover_file = form.cover_file.data
 
-        # === 1. Обработка аудиофайла ===
         if audio_file and audio_file.filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO:
             filename = secure_filename(audio_file.filename)
             moskow_zone = timezone(timedelta(hours=3))
@@ -134,12 +141,19 @@ def upload_track():
 
             upload_folder = os.path.join(app.root_path, 'static/uploads')
             os.makedirs(upload_folder, exist_ok=True)
-            audio_file.save(os.path.join(upload_folder, filename))
+            file_path = os.path.join(upload_folder, filename)
+            audio_file.save(file_path)
+
+            try:
+                audio = MutagenFile(file_path)
+                duration_seconds = int(audio.info.length) if audio and hasattr(audio.info, 'length') else 0
+            except Exception as e:
+                print(f"⚠️ Не удалось прочитать длительность: {e}")
+                duration_seconds = 0
         else:
             flash('Пожалуйста, загрузите файл в формате MP3 или WAV', 'danger')
             return render_template('upload.html', form=form)
 
-        # === 2. Обработка обложки ===
         cover_path = None
         if cover_file and cover_file.filename != '':
             ext = cover_file.filename.rsplit('.', 1)[1].lower()
@@ -160,8 +174,9 @@ def upload_track():
             title=form.title.data,
             artist=form.artist.data,
             genre=form.genre.data,
-            file_path=f'uploads/{filename}',  # ← ВЕРНУЛИ СТАРЫЙ ПУТЬ
+            file_path=f'uploads/{filename}',
             cover_path=cover_path,
+            duration=duration_seconds,
             author=current_user
         )
         db.session.add(new_track)
@@ -204,6 +219,21 @@ def upload_avatar():
         flash('Недопустимый формат файла (только PNG, JPG, GIF)', 'danger')
 
     return redirect(url_for('settings'))
+
+
+@app.route('/api/reorder_tracks', methods=['POST'])
+@login_required
+def reorder_tracks():
+    data = request.json
+    track_ids = data.get('track_ids', [])
+
+    for index, track_id in enumerate(track_ids):
+        track = Track.query.get(track_id)
+        if track and track.user_id == current_user.id:
+            track.track_order = index
+
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/api/delete_track/<int:track_id>', methods=['DELETE'])

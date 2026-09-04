@@ -34,5 +34,7 @@ class Track(db.Model):
     genre = db.Column(db.String(50), nullable=False)
     file_path = db.Column(db.String(255), nullable=False)
     cover_path = db.Column(db.String(255), default='images/covers_default/default_1.jpg')
+    duration = db.Column(db.Integer, default=0)
+    track_order = db.Column(db.Integer, default=0)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     plays = db.Column(db.Integer, default=0)

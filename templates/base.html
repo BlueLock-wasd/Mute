@@ -127,8 +127,11 @@
             <div class="container-fluid h-100 d-flex align-items-center">
                 <div class="row w-100 justify-content-center">
                     <div class="col-lg-5 col-md-6 d-flex flex-column align-items-center justify-content-center">
-                        <div id="fs-cover" class="mb-3" style="width: 250px; height: 250px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-                            <div class="music-icon-box w-100 h-100" style="font-size: 60px; border-radius: 20px;">🎵</div>
+                        <div id="fs-cover" class="mb-3" style="width: 250px; height: 250px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden;">
+                            <img id="fs-cover-img"
+                                 src="{{ url_for('static', filename='images/covers_default/default_1.jpg') }}"
+                                 alt="Обложка"
+                                 style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <h2 id="fs-title" class="fw-bold mb-1 text-center">Название трека</h2>
                         <p id="fs-artist" class="text-subdued fs-5 mb-3 text-center">Исполнитель</p>
@@ -199,6 +202,232 @@
         let queue = [];
         let currentIndex = 0;
 
+ // === ОБНОВЛЕНИЕ ОЧЕРЕДИ В UI ===
+function updateQueueUI() {
+    const queueList = document.getElementById('queue-list');
+    const queueCount = document.getElementById('queue-count');
+
+    if (!queueList) return;
+
+    if (queue.length === 0) {
+        queueList.innerHTML = `
+            <div class="text-center text-subdued small py-5">
+                <i class="bi bi-music-note-beamed fs-3 d-block mb-2"></i>
+                Список прослушивания пуст<br>
+                Добавьте треки из библиотеки
+            </div>
+        `;
+        if (queueCount) queueCount.textContent = '0 треков';
+        return;
+    }
+
+    let html = '';
+    queue.forEach((item, index) => {
+        const isActive = index === currentIndex ? 'active' : '';
+        html += `
+            <div class="queue-item ${isActive}" data-queue-index="${index}" draggable="false"
+                 style="cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: background 0.2s; ${isActive ? 'background: rgba(0, 200, 255, 0.15);' : ''}">
+                <div style="flex-grow: 1; min-width: 0;">
+                    <div class="queue-title" style="font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</div>
+                    <div class="queue-artist" style="color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.artist}</div>
+                </div>
+                <span class="drag-handle" draggable="true" style="cursor: grab; color: var(--text-muted); font-size: 1.2rem; padding: 0 8px;">
+                    <i class="bi bi-grip-vertical"></i>
+                </span>
+                <button class="queue-delete" data-queue-index="${index}" style="background: none; border: none; color: #ff4444; cursor: pointer; font-size: 1.1rem; opacity: 0; transition: opacity 0.2s; padding: 0 5px;">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        `;
+    });
+
+    queueList.innerHTML = html;
+    if (queueCount) queueCount.textContent = `${queue.length} треков`;
+
+    // === Клик по элементу очереди ===
+    document.querySelectorAll('.queue-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (e.target.closest('.queue-delete')) return;
+            if (e.target.closest('.drag-handle')) return;
+            const index = parseInt(this.dataset.queueIndex);
+            if (!isNaN(index) && index >= 0 && index < queue.length) {
+                currentIndex = index;
+                const track = queue[currentIndex];
+                playTrack(track.url, track.title, track.artist);
+                updateQueueUI();
+            }
+        });
+    });
+
+    // === Кнопка удаления из очереди ===
+    document.querySelectorAll('.queue-delete').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const index = parseInt(this.dataset.queueIndex);
+            if (!isNaN(index) && index >= 0 && index < queue.length) {
+                queue.splice(index, 1);
+                if (currentIndex >= queue.length) {
+                    currentIndex = Math.max(0, queue.length - 1);
+                }
+                if (queue.length === 0) {
+                    audio.pause();
+                    player.classList.add('hidden');
+                }
+                updateQueueUI();
+            }
+        });
+    });
+
+    // === DRAG & DROP ===
+    let draggedIndex = null;
+
+    document.querySelectorAll('.drag-handle').forEach(handle => {
+        handle.addEventListener('dragstart', function(e) {
+            const item = this.closest('.queue-item');
+            draggedIndex = parseInt(item.dataset.queueIndex);
+            this.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        handle.addEventListener('dragend', function(e) {
+            this.style.opacity = '1';
+        });
+    });
+
+    document.querySelectorAll('.queue-item').forEach(item => {
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.style.borderTop = '2px solid var(--neon-blue)';
+        });
+
+        item.addEventListener('dragleave', function(e) {
+            this.style.borderTop = 'none';
+        });
+
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.borderTop = 'none';
+
+            if (draggedIndex === null) return;
+
+            const targetIndex = parseInt(this.dataset.queueIndex);
+            if (draggedIndex === targetIndex) return;
+
+            // Перемещаем элемент в очереди
+            const [draggedItem] = queue.splice(draggedIndex, 1);
+            queue.splice(targetIndex, 0, draggedItem);
+
+            // Обновляем currentIndex
+            if (currentIndex === draggedIndex) {
+                currentIndex = targetIndex;
+            } else if (currentIndex > draggedIndex && currentIndex <= targetIndex) {
+                currentIndex--;
+            } else if (currentIndex < draggedIndex && currentIndex >= targetIndex) {
+                currentIndex++;
+            }
+
+            draggedIndex = null;
+            updateQueueUI();
+        });
+    });
+}
+
+function initLibraryDragDrop() {
+    const tbody = document.getElementById('library-tbody');
+    if (!tbody) return;
+
+    let draggedRow = null;
+    let draggedIndex = null;
+
+    document.querySelectorAll('.drag-handle-library').forEach(handle => {
+        handle.addEventListener('dragstart', function(e) {
+            draggedRow = this.closest('tr');
+            draggedIndex = parseInt(draggedRow.dataset.trackIndex);
+            this.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        handle.addEventListener('dragend', function(e) {
+            this.style.opacity = '1';
+        });
+    });
+
+    document.querySelectorAll('#library-tbody tr').forEach(row => {
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.style.borderTop = '2px solid var(--neon-blue)';
+        });
+
+        row.addEventListener('dragleave', function(e) {
+            this.style.borderTop = 'none';
+        });
+
+        row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.borderTop = 'none';
+
+            if (draggedRow === null || draggedIndex === null) return;
+
+            const targetRow = this;
+            const targetIndex = parseInt(targetRow.dataset.trackIndex);
+
+            if (draggedIndex === targetIndex) return;
+
+            // Перемещаем строку в DOM
+            if (draggedIndex < targetIndex) {
+                targetRow.parentNode.insertBefore(draggedRow, targetRow.nextSibling);
+            } else {
+                targetRow.parentNode.insertBefore(draggedRow, targetRow);
+            }
+
+            // Обновляем индексы
+            const rows = document.querySelectorAll('#library-tbody tr');
+            const trackIds = [];
+            rows.forEach((row, newIndex) => {
+                row.dataset.trackIndex = newIndex;
+                trackIds.push(parseInt(row.dataset.trackId));
+                const indexCell = row.querySelector('.drag-index');
+                if (indexCell) {
+                    indexCell.textContent = newIndex + 1;
+                }
+            });
+
+            // === ОТПРАВЛЯЕМ НОВЫЙ ПОРЯДОК НА СЕРВЕР ===
+            fetch('/api/reorder_tracks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ track_ids: trackIds })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Порядок треков сохранён');
+                }
+            })
+            .catch(error => console.error('❌ Ошибка сохранения порядка:', error));
+
+            draggedRow = null;
+            draggedIndex = null;
+        });
+    });
+}
+
+
+// Вызываем при загрузке страницы и после SPA-переходов
+document.addEventListener('DOMContentLoaded', initLibraryDragDrop);
+
+// Также вызываем после каждого SPA-обновления
+const originalLoadPage = loadPage;
+loadPage = async function(url) {
+    await originalLoadPage(url);
+    setTimeout(initLibraryDragDrop, 300);
+}
+
 function addToQueue(url, title, artist) {
     // Если очередь пуста — сначала загружаем все треки со страницы
     if (queue.length === 0) {
@@ -231,6 +460,7 @@ function addToQueue(url, title, artist) {
 
     // Запускаем
     playTrack(url, title, artist);
+    updateQueueUI();
 }
 
         // === 2. ЗАПУСК ТРЕКА ===
@@ -239,6 +469,40 @@ function playTrack(url, title, artist) {
 
     audio.pause();
     audio.src = url;
+
+    const trackCard = document.querySelector(`[data-track-url="${url}"]`);
+    let coverUrl = '{{ url_for('static', filename='images/covers_default/default_1.jpg') }}';
+
+    if (trackCard) {
+        // Сначала пробуем взять из data-атрибута
+        if (trackCard.dataset.trackCover) {
+            coverUrl = trackCard.dataset.trackCover;
+        } else {
+            // Если нет — ищем img внутри карточки
+            const img = trackCard.querySelector('img');
+            if (img && img.src) {
+                coverUrl = img.src;
+            }
+        }
+    }
+
+    // Обновляем обложку в мини-плеере
+    const playerCoverImg = document.querySelector('#player-cover img');
+    if (playerCoverImg) {
+        playerCoverImg.src = coverUrl;
+    } else {
+        // Если img нет — создаём
+        const playerCover = document.getElementById('player-cover');
+        if (playerCover) {
+            playerCover.innerHTML = `<img src="${coverUrl}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 8px;">`;
+        }
+    }
+
+    // Обновляем обложку в полноэкранном плеере
+    const fsCoverImg = document.getElementById('fs-cover-img');
+    if (fsCoverImg) {
+        fsCoverImg.src = coverUrl;
+    }
 
     titleEl.textContent = title;
     artistEl.textContent = artist;
@@ -254,9 +518,7 @@ function playTrack(url, title, artist) {
 
     audio.src = url;
 
-    // ЗАПУСКАЕМ БЕЗ ЛИШНИХ ПРОВЕРОК
     const playPromise = audio.play();
-
     if (playPromise !== undefined) {
         playPromise
             .then(() => {
@@ -264,7 +526,6 @@ function playTrack(url, title, artist) {
                 console.log('▶ Трек запущен:', title);
             })
             .catch(() => {
-                // Если сразу не получилось — перезагружаем и пробуем ещё раз
                 setTimeout(() => {
                     audio.play()
                         .then(() => updatePlayBtn(true))
@@ -309,6 +570,7 @@ function playTrack(url, title, artist) {
                 audio.pause();
                 updatePlayBtn(false);
             }
+            updateQueueUI();
         });
         fsPlayBtn.addEventListener('click', () => playBtn.click());
 
@@ -370,6 +632,7 @@ function playTrack(url, title, artist) {
             document.getElementById('fs-title').textContent = titleEl.textContent;
             document.getElementById('fs-artist').textContent = artistEl.textContent;
             fullscreenPlayer.classList.add('active');
+            updateQueueUI();
         }
         function closeFullscreen() {
             fullscreenPlayer.classList.remove('active');
@@ -377,6 +640,8 @@ function playTrack(url, title, artist) {
         closeBtn.addEventListener('click', closeFullscreen);
         document.getElementById('player-cover').addEventListener('click', openFullscreen);
         document.getElementById('player-title').addEventListener('click', openFullscreen);
+
+
 
         // ===== УДАЛЕНИЕ ТРЕКА ИЗ БИБЛИОТЕКИ =====
         function deleteTrack(trackId, trackTitle) {

@@ -25,8 +25,11 @@
                     {% for track in tracks[:4] %}
                     <div class="col-6">
                         <div class="text-center">
-                            <div class="music-icon-box w-100 mb-1" style="height: 100px; width: 100%; border-radius: 12px; font-size: 32px;">
-                                🎵
+                            <div style="height: 100px; width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 5px;">
+                                <img src="{{ url_for('static', filename=track.cover_path) }}"
+                                     alt="{{ track.title }}"
+                                     style="width: 100%; height: 100%; object-fit: cover;"
+                                     onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
                             </div>
                             <small class="text-truncate d-block fw-bold" style="font-size: 0.8rem;">{{ track.title }}</small>
                             <small class="text-subdued d-block" style="font-size: 0.7rem;">{{ track.artist }}</small>
@@ -68,57 +71,64 @@
                         <thead>
                             <tr style="color: var(--text-muted); font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
                                 <th scope="col" style="width: 30px;">#</th>
-                                <th scope="col" style="width: 40px;"></th> <!-- Колонка для кнопки Play -->
+                                <th scope="col" style="width: 50px;">Cover</th>  <!-- Обложка -->
+                                <th scope="col" style="width: 40px;">Play</th>
                                 <th scope="col">Song Title</th>
                                 <th scope="col">Artist</th>
                                 <th scope="col" class="text-end">Duration</th>
+                                <th scope="col" style="width: 40px;">Delete</th>
                                 <th scope="col" style="width: 40px;"></th>
-                                <th scope="col" style="width: 40px;"></th> <!-- Колонка для Drag Handle -->
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="library-tbody">
                             {% for track in tracks %}
-                           <tr style="transition: background 0.2s; cursor: default; border-bottom: 1px solid rgba(255,255,255,0.05);"
-                            data-track-url="/static/{{ track.file_path }}"
-                            data-track-title="{{ track.title }}"
-                            data-track-artist="{{ track.artist }}">
+                            <tr style="transition: background 0.2s; cursor: default; border-bottom: 1px solid rgba(255,255,255,0.05);"
+                                data-track-id="{{ track.id }}"
+                                data-track-index="{{ loop.index0 }}"
+                                data-track-url="/static/{{ track.file_path }}"
+                                data-track-title="{{ track.title }}"
+                                data-track-artist="{{ track.artist }}">
 
-                            <td class="text-subdued">{{ loop.index }}</td>
-                                
-                            <!-- КНОПКА ПЛЕЙ -->
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-light rounded-circle" style="border-color: var(--neon-blue); color: var(--neon-blue); width: 35px; height: 35px; padding: 0;"
-                                        onclick="addToQueue('{{ url_for('static', filename=track.file_path) }}', '{{ track.title }}', '{{ track.artist }}')">
-                                    <i class="bi bi-play-fill" style="font-size: 1.2rem;"></i>
-                                </button>
-                            </td>
+                                <td class="text-subdued drag-index">{{ loop.index }}</td>
 
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <span class="fw-bold">{{ track.title }}</span>
-                                </div>
-                            </td>
-                            <td class="text-subdued">{{ track.artist }}</td>
-                            <td class="text-end text-subdued" style="font-size: 0.8rem;">03:45</td>
+                                <!-- ОБЛОЖКА -->
+                                <td>
+                                    <img src="{{ url_for('static', filename=track.cover_path) }}"
+                                         alt="{{ track.title }}"
+                                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;"
+                                         onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
+                                </td>
 
-                               <!-- НОВАЯ КНОПКА УДАЛЕНИЯ -->
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-outline-danger rounded-circle" style="width: 30px; height: 30px; padding: 0; border: none; background: transparent; color: #ff4444;"
-                                        onclick="deleteTrack({{ track.id }}, '{{ track.title }}')">
-                                    <i class="bi bi-trash" style="font-size: 1.1rem;"></i>
-                                </button>
-                            </td>
+                                <!-- PLAY -->
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-light rounded-circle"
+                                            onclick="addToQueue('{{ url_for('static', filename=track.file_path) }}', '{{ track.title }}', '{{ track.artist }}')">
+                                        <i class="bi bi-play-fill"></i>
+                                    </button>
+                                </td>
 
-                            <!-- DRAG HANDLE -->
-                            <td class="text-center">
-                                <span class="drag-handle" style="cursor: grab; color: var(--text-muted); font-size: 1.2rem;">
-                                    <i class="bi bi-grip-vertical"></i>
-                                </span>
-                            </td>
-                        </tr>
+                                <td><span class="fw-bold">{{ track.title }}</span></td>
+                                <td class="text-subdued">{{ track.artist }}</td>
+                                <td class="text-end text-subdued">{{ track.duration | format_duration }}</td>
+
+                                <!-- DRAG HANDLE -->
+                                <td class="text-center">
+                                    <span class="drag-handle-library" draggable="true" style="cursor: grab; color: var(--text-muted); font-size: 1.2rem;">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </span>
+                                </td>
+
+                                <!-- УДАЛЕНИЕ -->
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-danger rounded-circle"
+                                            onclick="deleteTrack({{ track.id }}, '{{ track.title }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-subdued py-4">
+                                <td colspan="8" class="text-center text-subdued py-4">
                                     <i class="bi bi-music-note-beamed fs-3 d-block mb-2"></i>
                                     В этой библиотеке пока нет треков.
                                 </td>
