@@ -188,6 +188,7 @@ def upload_track():
     return render_template('upload.html', form=form)
 
 
+
 @app.route('/static/images/covers_download/<path:filename>')
 def serve_upload(filename):
     return send_from_directory('static/images/covers_download/', filename)

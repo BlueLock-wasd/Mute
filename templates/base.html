@@ -97,6 +97,13 @@
                         <button id="player-play" class="btn btn-neon rounded-circle" style="width: 40px; height: 40px; padding: 0; font-size: 1.1rem;">
                             <i class="bi bi-play-fill"></i>
                         </button>
+                        <!-- В мини-плеере, между Play и Next -->
+                        <button class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.9rem;" onclick="toggleFavorite()" title="В любимое">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.9rem;" onclick="shuffleQueue()" title="Перемешать">
+                            <i class="bi bi-shuffle"></i>
+                        </button>
                         <button id="player-next" class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.8rem;">
                             <i class="bi bi-skip-forward-fill"></i>
                         </button>
@@ -485,7 +492,25 @@ function playTrack(url, title, artist) {
             }
         }
     }
+    function toggleFavorite() {
+    alert('Добавлено в любимое!');
+    }
 
+    function shuffleQueue() {
+        if (queue.length > 1) {
+            // Перемешиваем очередь, но текущий трек оставляем на месте
+            const current = queue[currentIndex];
+            const others = queue.filter((_, i) => i !== currentIndex);
+            // Простой алгоритм перемешивания
+            for (let i = others.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [others[i], others[j]] = [others[j], others[i]];
+            }
+            queue = [current, ...others];
+            currentIndex = 0;
+            console.log('Очередь перемешана!');
+        }
+    }
     // Обновляем обложку в мини-плеере
     const playerCoverImg = document.querySelector('#player-cover img');
     if (playerCoverImg) {
@@ -814,7 +839,23 @@ function drawVisualizer() {
         else smoothData[i] = dataArray[i] * 0.5 + smoothData[i - 1] * 0.5;
     }
 
-    const bass = smoothData.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
+    // ===== ИСПРАВЛЕНИЕ 1: Используем ТОЛЬКО левую половину данных =====
+    const halfLength = Math.floor(smoothData.length / 2);
+    const realData = smoothData.slice(0, halfLength);
+
+    // ===== ИСПРАВЛЕНИЕ 2: Нормализация данных =====
+    const minVal = Math.min(...realData);
+    const maxVal = Math.max(...realData);
+    const range = maxVal - minVal;
+
+    const normalizedData = new Uint8Array(realData.length);
+    for (let i = 0; i < realData.length; i++) {
+        if (range === 0) normalizedData[i] = 0;
+        else normalizedData[i] = Math.round(((realData[i] - minVal) / range) * 255);
+    }
+
+    // ===== ИСПРАВЛЕНИЕ 3: Басс считаем из нормализованных данных =====
+    const bass = normalizedData.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
     const intensity = 0.3 + (bass / 255) * 0.7;
 
     const gradient = ctx.createLinearGradient(0, 0, width, 0);
@@ -833,13 +874,20 @@ function drawVisualizer() {
     ctx.beginPath();
     ctx.moveTo(0, midY);
 
+    // ===== ИСПРАВЛЕНИЕ 4: Используем normalizedData в цикле =====
     for (let x = 0; x <= width; x += 4) {
-        const idx = Math.floor((x / width) * smoothData.length);
-        const val = smoothData[idx] / 255;
+        // Используем normalizedData.length вместо smoothData.length
+        const idx = Math.floor((x / width) * normalizedData.length);
+        const val = normalizedData[idx] / 255;
         const y = midY + Math.sin(x * 0.02 + time) * (15 + val * 60 * intensity);
         ctx.lineTo(x, y);
     }
     ctx.stroke();
+
+    // ===== ОТЛАДКА (можно удалить потом) =====
+    console.log('Первые 10:', Array.from(normalizedData.slice(0, 10)));
+    console.log('Последние 10:', Array.from(normalizedData.slice(-10)));
+    console.log('Все ли значения > 0?', normalizedData.every(v => v > 0));
 
     requestAnimationFrame(drawVisualizer);
 }
@@ -877,6 +925,6 @@ if (audio.src && !audio.paused) {
     }
 }
 
-    </script>
+</script>
 </body>
 </html>
