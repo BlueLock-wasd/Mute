@@ -8,19 +8,23 @@
     <!-- ===== HERO-СЕКЦИЯ ===== -->
     <div class="row mt-2 mb-5 text-center position-relative">
         <div class="col-12">
-            <!-- Индикатор Sound On -->
-            <div class="sound-indicator mb-2">
-                <i class="bi bi-volume-up-fill"></i> Sound On
-            </div>
 
             <!-- Реактивная аудиоволна -->
             <canvas id="visualizerCanvas" style="width: 100%; height: 120px; border-radius: 50px;"></canvas>
 
             <h2 class="mt-5 fw-light">Your Personalized Sonic Journey Begins.</h2>
 
-            <!-- ===== ИНТЕРАКТИВНЫЙ ПОИСК ===== -->
-            <div class="search-wrapper mt-4">
-                <input type="text" class="search-input" placeholder="Впишите настроение, жанр или трек...">
+           <!-- ===== ИНТЕРАКТИВНЫЙ ПОИСК ===== -->
+            <div class="search-wrapper mt-4 position-relative">
+                <input type="text"
+                       class="search-input"
+                       id="searchInput"
+                       placeholder="Впишите настроение, жанр или трек..."
+                       autocomplete="off"
+                       oninput="handleSearch(this.value)">
+
+                <!-- ВЫПАДАЮЩИЙ СПИСОК РЕЗУЛЬТАТОВ -->
+                <div id="searchResults" class="search-results" style="display: none;"></div>
             </div>
 
             <!-- ===== СТИЛЬНЫЙ CTA (Кнопка) ===== -->
@@ -32,45 +36,92 @@
         </div>
     </div>
 
-    <!-- ===== СЕЙЧАС ПОПУЛЯРНО (горизонтальная сетка) ===== -->
+    <!-- ===== MOOD CHIPS (Фильтры по настроению) ===== -->
     <div class="row mb-5">
         <div class="col-12">
-            <h4 class="fw-bold mb-3">Сейчас популярно</h4>
+            <h4 class="fw-bold mb-3">Фильтры</h4>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="mood-chip" onclick="playMood('focus')">Концентрация</button>
+                <button class="mood-chip" onclick="playMood('chill')">Релакс</button>
+                <button class="mood-chip" onclick="playMood('cyberpunk')">Киберпанк</button>
+                <button class="mood-chip" onclick="playMood('night-drive')">Ночная поездка</button>
+                <button class="mood-chip" onclick="playMood('lofi')">Lo-fi</button>
+                <button class="mood-chip" onclick="playMood('electronic')">Электроника</button>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated and user_tracks %}
+    <!-- ===== ИЗ МОЕЙ БИБЛИОТЕКИ ===== -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0"><i class="bi bi-person-circle me-2"></i>Из моей библиотеки</h4>
+                <a href="{{ url_for('user_library', username=current_user.username) }}" class="text-index small text-decoration-none">
+                    Все треки <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
             <div class="row g-3">
-                {% for track in tracks[:6] %}
+                {% for track in user_tracks[:6] %}
                 <div class="col-6 col-md-4 col-lg-2">
-                    <div class="trend-card" data-track-url="/static/{{ track.file_path }}" data-track-title="{{ track.title }}" data-track-artist="{{ track.artist }}">
-                        <div class="trend-cover">
-                            <div class="music-icon-box w-100 h-100" style="font-size: 32px;">🎵</div>
+                    <div class="trend-card"
+                         data-track-url="/static/{{ track.file_path }}"
+                         data-track-title="{{ track.title }}"
+                         data-track-artist="{{ track.artist }}"
+                         data-track-cover="{{ url_for('static', filename=track.cover_path) }}">
+                        <div class="trend-cover" style="overflow: hidden;">
+                            <img src="{{ url_for('static', filename=track.cover_path) }}"
+                                 alt="{{ track.title }}"
+                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
                         </div>
                         <div class="mt-2">
                             <div class="fw-bold small text-truncate">{{ track.title }}</div>
                             <div class="text-subdued small text-truncate">{{ track.artist }}</div>
                         </div>
-                        <button class="btn btn-sm btn-outline-light rounded-circle trend-play" style="border-color: var(--neon-blue); color: var(--neon-blue); width: 30px; height: 30px; padding: 0;"
-                                onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}')">
-                            <i class="bi bi-play-fill" style="font-size: 1rem;"></i>
-                        </button>
+                            <button class="btn btn-sm btn-outline-light rounded-circle trend-play"
+                                    onclick="event.stopPropagation(); addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
+                                <i class="bi bi-play-fill" style="font-size: 1rem;"></i>
+                            </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== СЕЙЧАС ПОПУЛЯРНО ===== -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h4 class="fw-bold mb-3"><i class="bi bi-fire me-2"></i>Сейчас популярно</h4>
+            <div class="row g-3">
+                {% for track in tracks[:6] %}
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="trend-card"
+                         data-track-url="/static/{{ track.file_path }}"
+                         data-track-title="{{ track.title }}"
+                         data-track-artist="{{ track.artist }}"
+                         data-track-cover="{{ url_for('static', filename=track.cover_path) }}">
+                        <div class="trend-cover" style="overflow: hidden;">
+                            <img src="{{ url_for('static', filename=track.cover_path) }}"
+                                 alt="{{ track.title }}"
+                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
+                        </div>
+                        <div class="mt-2">
+                            <div class="fw-bold small text-truncate">{{ track.title }}</div>
+                            <div class="text-subdued small text-truncate">{{ track.artist }}</div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-light rounded-circle trend-play"
+                            onclick="event.stopPropagation(); addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
+                        <i class="bi bi-play-fill" style="font-size: 1rem;"></i>
+                    </button>
                     </div>
                 </div>
                 {% else %}
                 <div class="col-12 text-center text-muted">Нет треков</div>
                 {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== MOOD CHIPS (Фильтры по настроению) ===== -->
-    <div class="row mb-5">
-        <div class="col-12">
-            <h4 class="fw-bold mb-3">Mood Chips</h4>
-            <div class="d-flex flex-wrap gap-2">
-                <button class="mood-chip" onclick="playMood('focus')">Focus</button>
-                <button class="mood-chip" onclick="playMood('chill')">Chill</button>
-                <button class="mood-chip" onclick="playMood('cyberpunk')">Cyberpunk</button>
-                <button class="mood-chip" onclick="playMood('night-drive')">Night Drive</button>
-                <button class="mood-chip" onclick="playMood('lofi')">Lofi</button>
-                <button class="mood-chip" onclick="playMood('electronic')">Electronic</button>
             </div>
         </div>
     </div>
@@ -93,5 +144,130 @@
         console.log('Запускаем поток для настроения:', mood);
         // Здесь можно добавить фильтрацию треков по жанру из базы
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(initVisualizer, 200);
+    });
+// ===== ЖИВОЙ ПОИСК ТРЕКОВ =====
+let allSearchTracks = [];
+
+// Собираем все треки со страницы при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    const trackCards = document.querySelectorAll('[data-track-url]');
+    allSearchTracks = Array.from(trackCards).map(card => ({
+        url: card.dataset.trackUrl,
+        title: card.dataset.trackTitle,
+        artist: card.dataset.trackArtist,
+        cover: card.dataset.trackCover || ''
+    }));
+});
+
+function handleSearch(query) {
+    const resultsContainer = document.getElementById('searchResults');
+
+    // Если запрос пустой — скрываем результаты
+    if (!query || query.trim().length === 0) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+
+    const q = query.toLowerCase().trim();
+
+    // Фильтруем треки + УБИРАЕМ ДУБЛИКАТЫ
+    const seen = new Set();
+    const results = allSearchTracks.filter(track => {
+        // Проверяем, подходит ли под запрос
+        const matches = track.title.toLowerCase().includes(q) ||
+                        track.artist.toLowerCase().includes(q);
+        if (!matches) return false;
+
+        // Ключ для проверки дубликата (название + исполнитель в нижнем регистре)
+        const key = (track.title.toLowerCase().trim() + '|' + track.artist.toLowerCase().trim());
+
+        // Если уже видели такой трек — пропускаем
+        if (seen.has(key)) return false;
+
+        // Запоминаем и оставляем
+        seen.add(key);
+        return true;
+    });
+
+    // Показываем результаты
+    resultsContainer.style.display = 'block';
+
+    if (results.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="search-no-results">
+                <i class="bi bi-search fs-4 d-block mb-2"></i>
+                Ничего не найдено по запросу "${query}"
+            </div>
+        `;
+        return;
+    }
+
+    // Ограничиваем 10 результатами
+    let html = '';
+    results.slice(0, 10).forEach(track => {
+        const cover = track.cover || '{{ url_for('static', filename='images/covers_default/default_1.jpg') }}';
+        html += `
+            <div class="search-result-item">
+                <img src="${cover}"
+                     class="search-result-cover"
+                     onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
+                <div class="search-result-info">
+                    <div class="search-result-title">${escapeHtml(track.title)}</div>
+                    <div class="search-result-artist">${escapeHtml(track.artist)}</div>
+                </div>
+                <div class="search-result-actions">
+                    <button title="Добавить в очередь"
+                           onclick="event.stopPropagation(); addToQueue('${track.url}', '${escapeJs(track.title)}', '${escapeJs(track.artist)}', '${cover}', true)">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                    <button title="Слушать"
+                           onclick="event.stopPropagation(); addToQueue('${track.url}', '${escapeJs(track.title)}', '${escapeJs(track.artist)}', '${cover}', true)">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    resultsContainer.innerHTML = html;
+}
+
+// Экранирование HTML (защита от XSS)
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+}
+
+// Экранирование для JS-строк
+function escapeJs(str) {
+    if (!str) return '';
+    return str.replace(/\\/g, '\\\\')
+              .replace(/'/g, "\\'")
+              .replace(/"/g, '\\"')
+              .replace(/\n/g, '\\n');
+}
+
+// Закрываем результаты при клике вне поиска
+document.addEventListener('click', function(e) {
+    const searchWrapper = document.querySelector('.search-wrapper');
+    if (searchWrapper && !searchWrapper.contains(e.target)) {
+        document.getElementById('searchResults').style.display = 'none';
+    }
+});
+
+// Закрываем результаты при нажатии Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('searchInput').blur();
+    }
+});
 </script>
 {% endblock %}

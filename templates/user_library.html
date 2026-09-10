@@ -102,7 +102,7 @@
                                 <!-- PLAY -->
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-outline-light rounded-circle"
-                                            onclick="addToQueue('{{ url_for('static', filename=track.file_path) }}', '{{ track.title }}', '{{ track.artist }}')">
+                                            onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
                                         <i class="bi bi-play-fill"></i>
                                     </button>
                                 </td>

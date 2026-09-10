@@ -97,15 +97,15 @@
                         <button id="player-play" class="btn btn-neon rounded-circle" style="width: 40px; height: 40px; padding: 0; font-size: 1.1rem;">
                             <i class="bi bi-play-fill"></i>
                         </button>
+                        <button id="player-next" class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.8rem;">
+                            <i class="bi bi-skip-forward-fill"></i>
+                        </button>
                         <!-- В мини-плеере, между Play и Next -->
                         <button class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.9rem;" onclick="toggleFavorite()" title="В любимое">
                             <i class="bi bi-heart"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.9rem;" onclick="shuffleQueue()" title="Перемешать">
                             <i class="bi bi-shuffle"></i>
-                        </button>
-                        <button id="player-next" class="btn btn-sm btn-outline-light rounded-circle" style="width: 30px; height: 30px; padding: 0; font-size: 0.8rem;">
-                            <i class="bi bi-skip-forward-fill"></i>
                         </button>
                     </div>
                     <div class="progress-wrapper mt-1 d-flex align-items-center gap-2">
@@ -124,65 +124,67 @@
         </div>
     </div>
 
-    <!-- ===== ПОЛНОЭКРАННЫЙ ПЛЕЕР ===== -->
-    <div id="fullscreen-player" class="fullscreen-player hidden">
-        <div class="fullscreen-bg-blur"></div>
-        <div class="fullscreen-content">
-            <button id="close-fullscreen" class="btn btn-outline-light rounded-circle position-absolute top-0 end-0 m-4" style="width: 40px; height: 40px; font-size: 1.2rem; z-index: 10;">
-                <i class="bi bi-chevron-down"></i>
-            </button>
-            <div class="container-fluid h-100 d-flex align-items-center">
-                <div class="row w-100 justify-content-center">
-                    <div class="col-lg-5 col-md-6 d-flex flex-column align-items-center justify-content-center">
-                        <div id="fs-cover" class="mb-3" style="width: 250px; height: 250px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden;">
-                            <img id="fs-cover-img"
-                                 src="{{ url_for('static', filename='images/covers_default/default_1.jpg') }}"
-                                 alt="Обложка"
-                                 style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                        <h2 id="fs-title" class="fw-bold mb-1 text-center">Название трека</h2>
-                        <p id="fs-artist" class="text-subdued fs-5 mb-3 text-center">Исполнитель</p>
-                        <div class="w-75 d-flex align-items-center gap-2">
-                            <span id="fs-current-time" class="text-subdued small" style="min-width: 35px;">0:00</span>
-                            <input type="range" id="fs-progress" class="custom-range fs-range" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;">
-                            <span id="fs-duration" class="text-subdued small" style="min-width: 35px;">0:00</span>
-                        </div>
+  <!-- ===== ПОЛНОЭКРАННЫЙ ПЛЕЕР ===== -->
+<div id="fullscreen-player" class="fullscreen-player hidden">
+    <div class="fullscreen-bg-blur"></div>
+    <div class="fullscreen-content">
+        <button id="close-fullscreen" class="btn btn-outline-light rounded-circle position-absolute top-0 end-0 m-4" style="width: 40px; height: 40px; font-size: 1.2rem; z-index: 10;">
+            <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="container-fluid h-100 d-flex align-items-center">
+            <div class="row w-100 justify-content-center">
+                <div class="col-lg-5 col-md-6 d-flex flex-column align-items-center justify-content-center">
+
+                    <!-- ВРАЩАЮЩАЯСЯ ОБЛОЖКА -->
+                    <div id="fs-cover" class="mb-4" style="width: 280px; height: 280px;">
+                        <img id="fs-cover-img"
+                             src="{{ url_for('static', filename='images/covers_default/default_1.jpg') }}"
+                             alt="Обложка">
                     </div>
 
+                    <h2 id="fs-title" class="fw-bold mb-1 text-center">Название трека</h2>
+                    <p id="fs-artist" class="text-subdued fs-5 mb-3 text-center">Исполнитель</p>
 
-                                        <!-- ПРАВАЯ ЧАСТЬ: ПАНЕЛЬ ОЧЕРЕДИ/СПИСОК -->
-                    <div class="col-lg-5 col-md-6 d-flex flex-column ps-lg-4 mt-4 mt-md-0" style="border-left: 1px solid rgba(255,255,255,0.1);">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>Очередь</h5>
-                            <span class="text-subdued small" id="queue-count">0 треков</span>
-                        </div>
+                    <div class="w-75 d-flex align-items-center gap-2">
+                        <span id="fs-current-time" class="text-subdued small" style="min-width: 35px;">0:00</span>
+                        <input type="range" id="fs-progress" class="custom-range fs-range" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;">
+                        <span id="fs-duration" class="text-subdued small" style="min-width: 35px;">0:00</span>
+                    </div>
+                </div>
 
-                        <div id="queue-list" class="flex-grow-1 overflow-auto" style="max-height: 400px; padding-right: 5px;">
-                            <div class="text-center text-subdued small py-5">
-                                <i class="bi bi-music-note-beamed fs-3 d-block mb-2"></i>
-                                Список прослушивания пуст<br>
-                                Добавьте треки из библиотеки
-                            </div>
+                <!-- ПРАВАЯ ЧАСТЬ: ПАНЕЛЬ ОЧЕРЕДИ -->
+                <div class="col-lg-5 col-md-6 d-flex flex-column ps-lg-4 mt-4 mt-md-0" style="border-left: 1px solid rgba(255,255,255,0.1);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>Очередь</h5>
+                        <span class="text-subdued small" id="queue-count">0 треков</span>
+                    </div>
+                    <div id="queue-list" class="flex-grow-1 overflow-auto" style="max-height: 400px; padding-right: 5px;">
+                        <div class="text-center text-subdued small py-5">
+                            <i class="bi bi-music-note-beamed fs-3 d-block mb-2"></i>
+                            Список прослушивания пуст<br>
+                            Добавьте треки из библиотеки
                         </div>
                     </div>
+                </div>
 
-                    <div class="mt-3 d-flex justify-content-center gap-3">
-                        <button id="fs-prev" class="btn btn-outline-light rounded-circle" style="width: 50px; height: 50px; font-size: 1.2rem;">
-                            <i class="bi bi-skip-backward-fill"></i>
-                        </button>
-                        <button id="fs-play" class="btn btn-neon rounded-circle" style="width: 60px; height: 60px; font-size: 1rem;">
-                            <i class="bi bi-play-fill"></i>
-                        </button>
-                        <button id="fs-next" class="btn btn-outline-light rounded-circle" style="width: 50px; height: 50px; font-size: 1.2rem;">
-                            <i class="bi bi-skip-forward-fill"></i>
-                        </button>
-                    </div>
+                <!-- КНОПКИ УПРАВЛЕНИЯ -->
+                <div class="mt-3 d-flex justify-content-center gap-3">
+                    <button id="fs-prev" class="btn btn-outline-light rounded-circle" style="width: 50px; height: 50px; font-size: 1.2rem;">
+                        <i class="bi bi-skip-backward-fill"></i>
+                    </button>
+                    <button id="fs-play" class="btn btn-neon rounded-circle" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    <button id="fs-next" class="btn btn-outline-light rounded-circle" style="width: 50px; height: 50px; font-size: 1.2rem;">
+                        <i class="bi bi-skip-forward-fill"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <audio id="audio-player" style="display: none;"></audio>
+<audio id="audio-player" style="display: none;"></audio>
 
     <!-- ===== СКРИПТ ПЛЕЕРА (Стабильная версия) + SPA ===== -->
     <script>
@@ -260,7 +262,7 @@ function updateQueueUI() {
             if (!isNaN(index) && index >= 0 && index < queue.length) {
                 currentIndex = index;
                 const track = queue[currentIndex];
-                playTrack(track.url, track.title, track.artist);
+                playTrack(track.url, track.title, track.artist, track.cover);
                 updateQueueUI();
             }
         });
@@ -435,43 +437,63 @@ loadPage = async function(url) {
     setTimeout(initLibraryDragDrop, 300);
 }
 
-function addToQueue(url, title, artist) {
-    // Если очередь пуста — сначала загружаем все треки со страницы
-    if (queue.length === 0) {
+// ===== ДОБАВЛЕНИЕ В ОЧЕРЕДЬ =====
+function addToQueue(url, title, artist, cover, isManual = false) {
+    // 1. ЕСЛИ АВТОЗАГРУЗКА — ЗАПОЛНЯЕМ БЕЗ ДУБЛИКАТОВ
+    if (queue.length === 0 && !isManual) {
         const trackCards = document.querySelectorAll('[data-track-url]');
         if (trackCards.length > 0) {
             window._autoLoading = true;
+            const seen = new Set();
             trackCards.forEach(card => {
+                const cardUrl = card.dataset.trackUrl;
+                // Проверка на дубликат
+                if (seen.has(cardUrl)) return;
+                seen.add(cardUrl);
                 queue.push({
-                    url: card.dataset.trackUrl,
+                    url: cardUrl,
                     title: card.dataset.trackTitle,
-                    artist: card.dataset.trackArtist
+                    artist: card.dataset.trackArtist,
+                    cover: card.dataset.trackCover || ''
                 });
             });
             window._autoLoading = false;
         }
     }
 
-    // Если этот трек уже играет — ничего не делаем
-    if (queue.length > 0 && queue[currentIndex]?.url === url && !audio.paused) return;
-
-    // Если этот трек уже есть в очереди — убираем его
-    const existingIndex = queue.findIndex(t => t.url === url);
-    if (existingIndex !== -1) {
-        queue.splice(existingIndex, 1);
+    // 2. ЕСЛИ ТРЕК УЖЕ ИГРАЕТ — НИЧЕГО НЕ ДЕЛАЕМ (защита от повторного запуска того же трека)
+    if (queue.length > 0 && queue[currentIndex]?.url === url && !audio.paused) {
+        return;
     }
 
-    // Вставляем в начало
-    queue.unshift({ url, title, artist });
-    currentIndex = 0;
+    // 3. ЕСЛИ ТРЕК УЖЕ В ОЧЕРЕДИ И ЭТО НЕ РУЧНОЕ ДОБАВЛЕНИЕ — ПРОСТО ПЕРЕХОДИМ К НЕМУ
+    const existingIndex = queue.findIndex(t => t.url === url);
+    if (existingIndex !== -1 && !isManual) {
+        // Просто переходим на него, не удаляя из очереди
+        currentIndex = existingIndex;
+        playTrack(url, title, artist, cover);
+        updateQueueUI();
+        return;
+    }
 
-    // Запускаем
-    playTrack(url, title, artist);
+    // 4. РУЧНОЕ ДОБАВЛЕНИЕ — ВСЕГДА ДОБАВЛЯЕМ В НАЧАЛО (даже если уже есть)
+    if (isManual) {
+        queue.unshift({ url, title, artist, cover: cover || '' });
+        currentIndex = 0;
+    } else {
+        // АВТОМАТИЧЕСКОЕ — вставляем в конец (если не найден)
+        if (existingIndex === -1) {
+            queue.push({ url, title, artist, cover: cover || '' });
+        }
+    }
+
+    // 5. ЗАПУСКАЕМ
+    playTrack(url, title, artist, cover);
     updateQueueUI();
 }
 
         // === 2. ЗАПУСК ТРЕКА ===
-function playTrack(url, title, artist) {
+function playTrack(url, title, artist, cover) {
     if (audio.src.includes(url) && !audio.paused) return;
 
     audio.pause();
@@ -516,7 +538,6 @@ function playTrack(url, title, artist) {
     if (playerCoverImg) {
         playerCoverImg.src = coverUrl;
     } else {
-        // Если img нет — создаём
         const playerCover = document.getElementById('player-cover');
         if (playerCover) {
             playerCover.innerHTML = `<img src="${coverUrl}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 8px;">`;
@@ -563,6 +584,7 @@ function playTrack(url, title, artist) {
         duration.textContent = formatTime(audio.duration);
         document.getElementById('fs-duration').textContent = formatTime(audio.duration);
     };
+
 }
 
         // === 3. ПЕРЕКЛЮЧЕНИЕ ===
@@ -570,16 +592,15 @@ function playTrack(url, title, artist) {
             if (queue.length === 0) return;
             currentIndex = (currentIndex + 1) % queue.length;
             const next = queue[currentIndex];
-            playTrack(next.url, next.title, next.artist);
+            playTrack(next.url, next.title, next.artist, next.cover);
         }
 
         function playPrev() {
             if (queue.length === 0) return;
             currentIndex = (currentIndex - 1 + queue.length) % queue.length;
             const prev = queue[currentIndex];
-            playTrack(prev.url, prev.title, prev.artist);
+            playTrack(prev.url, prev.title, prev.artist, prev.cover);
         }
-
         // === 4. КНОПКИ ===
         function updatePlayBtn(isPlaying) {
             const icon = isPlaying ? 'bi-pause-fill' : 'bi-play-fill';
@@ -611,6 +632,15 @@ function playTrack(url, title, artist) {
 
         audio.addEventListener('play', () => {
             initVisualizer();
+            // Запускаем вращение обложки
+            const fsCover = document.getElementById('fs-cover');
+            if (fsCover) fsCover.classList.add('playing');
+        });
+
+        audio.addEventListener('pause', () => {
+            // Останавливаем вращение обложки
+            const fsCover = document.getElementById('fs-cover');
+            if (fsCover) fsCover.classList.remove('playing');
         });
 
         // === 5. ПРОГРЕСС ===
@@ -710,7 +740,13 @@ function playTrack(url, title, artist) {
         const mainContent = document.getElementById('main-content');
 
 async function loadPage(url) {
-    if (!url || url === window.location.href) return;
+    if (url === '/' || url === window.location.origin + '/') {
+    setTimeout(() => {
+        if (audio.src && !audio.paused) {
+            initVisualizer();
+        }
+    }, 300);
+}
 
     try {
         const response = await fetch(url, {
@@ -799,7 +835,9 @@ function initVisualizer() {
     if (!audioCtx) initAudioContext();
     if (!audioCtx) return;
 
-    connectSource();
+    if (audio.src) {
+        connectSource();
+    }
 
     if (!isVisualizerInitialized) {
         isVisualizerInitialized = true;
@@ -823,41 +861,46 @@ function drawVisualizer() {
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
 
-    if (!analyser) {
-        requestAnimationFrame(drawVisualizer);
-        return;
-    }
-
-    analyser.getByteFrequencyData(dataArray);
-
     ctx.clearRect(0, 0, width, height);
 
-    // Сглаживание
-    const smoothData = new Uint8Array(dataArray.length);
-    for (let i = 0; i < dataArray.length; i++) {
-        if (i === 0) smoothData[i] = dataArray[i];
-        else smoothData[i] = dataArray[i] * 0.5 + smoothData[i - 1] * 0.5;
+    // ===== БАЗОВЫЕ ЗНАЧЕНИЯ (без музыки) =====
+    let bass = 0;
+    let normalizedData = null;
+
+    // ===== ЕСЛИ АНАЛИЗАТОР ГОТОВ — БЕРЁМ ДАННЫЕ =====
+    if (analyser && dataArray) {
+        analyser.getByteFrequencyData(dataArray);
+
+        // Сглаживание
+        const smoothData = new Uint8Array(dataArray.length);
+        for (let i = 0; i < dataArray.length; i++) {
+            if (i === 0) smoothData[i] = dataArray[i];
+            else smoothData[i] = dataArray[i] * 0.5 + smoothData[i - 1] * 0.5;
+        }
+
+        // Берём левую половину (низкие и средние частоты)
+        const halfLength = Math.floor(smoothData.length / 2);
+        const realData = smoothData.slice(0, halfLength);
+
+        // Нормализация
+        const minVal = Math.min(...realData);
+        const maxVal = Math.max(...realData);
+        const range = maxVal - minVal;
+
+        normalizedData = new Uint8Array(realData.length);
+        for (let i = 0; i < realData.length; i++) {
+            if (range === 0) normalizedData[i] = 0;
+            else normalizedData[i] = Math.round(((realData[i] - minVal) / range) * 255);
+        }
+
+        // Считаем бас
+        bass = normalizedData.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
     }
 
-    // ===== ИСПРАВЛЕНИЕ 1: Используем ТОЛЬКО левую половину данных =====
-    const halfLength = Math.floor(smoothData.length / 2);
-    const realData = smoothData.slice(0, halfLength);
-
-    // ===== ИСПРАВЛЕНИЕ 2: Нормализация данных =====
-    const minVal = Math.min(...realData);
-    const maxVal = Math.max(...realData);
-    const range = maxVal - minVal;
-
-    const normalizedData = new Uint8Array(realData.length);
-    for (let i = 0; i < realData.length; i++) {
-        if (range === 0) normalizedData[i] = 0;
-        else normalizedData[i] = Math.round(((realData[i] - minVal) / range) * 255);
-    }
-
-    // ===== ИСПРАВЛЕНИЕ 3: Басс считаем из нормализованных данных =====
-    const bass = normalizedData.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
+    // Интенсивность: если музыки нет — базовая (0.3), если есть — зависит от баса
     const intensity = 0.3 + (bass / 255) * 0.7;
 
+    // Градиент
     const gradient = ctx.createLinearGradient(0, 0, width, 0);
     gradient.addColorStop(0, '#00c8ff');
     gradient.addColorStop(0.5, '#ff00e4');
@@ -874,20 +917,21 @@ function drawVisualizer() {
     ctx.beginPath();
     ctx.moveTo(0, midY);
 
-    // ===== ИСПРАВЛЕНИЕ 4: Используем normalizedData в цикле =====
+    // ===== РИСУЕМ ЛИНИЮ (работает и без музыки) =====
     for (let x = 0; x <= width; x += 4) {
-        // Используем normalizedData.length вместо smoothData.length
-        const idx = Math.floor((x / width) * normalizedData.length);
-        const val = normalizedData[idx] / 255;
+        let val = 0;
+
+        // Если есть данные от анализатора — используем их
+        if (normalizedData && normalizedData.length > 0) {
+            const idx = Math.floor((x / width) * normalizedData.length);
+            val = normalizedData[idx] / 255;
+        }
+
+        // Основная волна: базовый синус + данные от музыки (если есть)
         const y = midY + Math.sin(x * 0.02 + time) * (15 + val * 60 * intensity);
         ctx.lineTo(x, y);
     }
     ctx.stroke();
-
-    // ===== ОТЛАДКА (можно удалить потом) =====
-    console.log('Первые 10:', Array.from(normalizedData.slice(0, 10)));
-    console.log('Последние 10:', Array.from(normalizedData.slice(-10)));
-    console.log('Все ли значения > 0?', normalizedData.every(v => v > 0));
 
     requestAnimationFrame(drawVisualizer);
 }

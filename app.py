@@ -52,9 +52,10 @@ def format_duration(seconds):
 @app.route('/')
 def index():
     tracks = Track.query.order_by(Track.uploaded_at.desc()).limit(10).all()
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render_template('index.html', tracks=tracks)
-    return render_template('index.html', tracks=tracks)
+    user_tracks = []
+    if current_user.is_authenticated:
+        user_tracks = Track.query.filter_by(user_id=current_user.id).order_by(Track.uploaded_at.desc()).all()
+    return render_template('index.html', tracks=tracks, user_tracks=user_tracks)    
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -242,20 +243,16 @@ def reorder_tracks():
 def delete_track(track_id):
     track = Track.query.get_or_404(track_id)
 
-    # Проверяем права: только владелец или админ может удалить
     if track.user_id != current_user.id and current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'У вас нет прав для удаления этого трека'}), 403
 
-    # Удаляем файл с диска (если он существует)
     try:
         file_path = os.path.join(app.root_path, 'static', track.file_path)
         if os.path.exists(file_path):
             os.remove(file_path)
     except Exception as e:
         print(f"Ошибка при удалении файла: {e}")
-        # Продолжаем, даже если файл не удалился
 
-    # Удаляем запись из базы данных
     db.session.delete(track)
     db.session.commit()
 

@@ -43,7 +43,7 @@
 
             <div class="mt-3">
                 <button class="btn btn-outline-light w-100" style="border-color: var(--neon-blue); color: var(--neon-blue);"
-                        onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}')">
+                        onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
                     <i class="bi bi-play-circle"></i> Слушать
                 </button>
             </div>

@@ -1,10 +1,6 @@
-from email.mime import image
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
-
-from sqlalchemy.engine import default
 
 db = SQLAlchemy()
 
@@ -20,7 +16,7 @@ class User(UserMixin, db.Model):
     avatar_url = db.Column(db.String(255), default='avatar/default.png')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Связь с треками (один ко многим)
+
     tracks = db.relationship('Track', backref='author', lazy='dynamic', cascade='all, delete-orphan')
 
 

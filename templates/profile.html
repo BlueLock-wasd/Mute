@@ -48,7 +48,7 @@
                         <small class="text-profile">{{ track.artist }} • {{ track.genre }}</small>
                     </div>
                     <a href="#" class="btn btn-outline-light btn-sm rounded-circle"
-                       onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}')">
+                       onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
                         <i class="bi bi-play-fill"></i>
                     </a>
                 </div>
