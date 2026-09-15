@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика {{ user.username }} - MUTE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+
+            <!-- Кнопка назад -->
+            <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-outline-light btn-sm mb-4">
+                <i class="bi bi-arrow-left"></i> Назад в профиль
+            </a>
+
+            <h2 class="mb-4"><i class="bi bi-graph-up-arrow"></i> Статистика {{ user.username }}</h2>
+
+            <!-- Карточки с числами -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="glass-card p-4 text-center">
+                        <i class="bi bi-music-note-list fs-1 text-index"></i>
+                        <h3 class="mt-2 mb-0">{{ total_tracks }}</h3>
+                        <small class="text-subdued">Всего треков</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="glass-card p-4 text-center">
+                        <i class="bi bi-headphones fs-1 text-index"></i>
+                        <h3 class="mt-2 mb-0">{{ total_plays }}</h3>
+                        <small class="text-subdued">Прослушиваний</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="glass-card p-4 text-center">
+                        <i class="bi bi-clock-history fs-1 text-index"></i>
+                        <h3 class="mt-2 mb-0">{{ hours }}ч {{ minutes }}м</h3>
+                        <small class="text-subdued">Общее время</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Топ-жанры -->
+            <div class="glass-card p-4 mb-4">
+                <h4 class="mb-3"><i class="bi bi-tags"></i> Топ-жанры</h4>
+                {% if top_genres %}
+                    {% for genre, count in top_genres %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ genre }}</span>
+                        <span class="badge bg-secondary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-subdued">Нет данных</p>
+                {% endif %}
+            </div>
+
+            <!-- Топ-треки -->
+            <div class="glass-card p-4">
+                <h4 class="mb-3"><i class="bi bi-trophy"></i> Топ-треки</h4>
+                {% if top_tracks %}
+                    {% for track in top_tracks %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div style="width: 45px; height: 45px; border-radius: 8px; overflow: hidden; margin-right: 12px; flex-shrink: 0;">
+                            <img src="{{ url_for('static', filename=track.cover_path) }}"
+                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ track.title }}</div>
+                            <small class="text-subdued">{{ track.artist }}</small>
+                        </div>
+                        <span class="text-index">{{ track.plays }} ▶</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-subdued">Нет данных</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

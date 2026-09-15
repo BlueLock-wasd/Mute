@@ -34,3 +34,4 @@ class Track(db.Model):
     track_order = db.Column(db.Integer, default=0)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     plays = db.Column(db.Integer, default=0)
+    source = db.Column(db.String(30), default='manual')

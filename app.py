@@ -23,6 +23,7 @@ login_manager.login_view = 'login'
 ALLOWED_AUDIO = {'mp3', 'wav'}
 ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'gif'}
 
+MOSCOW_TZ = timezone(timedelta(hours=Config.TIMEZONE_OFFSET))
 
 def get_random_default_cover():
     default_folder = os.path.join(app.root_path, 'static/images/covers_default')
@@ -32,7 +33,7 @@ def get_random_default_cover():
     if default_covers:
         return f'images/covers_default/{random.choice(default_covers)}'
     else:
-        return 'images/default/defaul_0.jpg'
+        return 'images/covers_default/default_1.jpg'
 
 
 @login_manager.user_loader
@@ -51,7 +52,7 @@ def format_duration(seconds):
 
 @app.route('/')
 def index():
-    tracks = Track.query.order_by(Track.uploaded_at.desc()).limit(10).all()
+    tracks = Track.query.order_by(Track.uploaded_at.desc()).limit(Config.HOME_TRACKS_LIMIT).all()
     user_tracks = []
     if current_user.is_authenticated:
         user_tracks = Track.query.filter_by(user_id=current_user.id).order_by(Track.uploaded_at.desc()).all()
@@ -103,10 +104,7 @@ def music_library():
 
 @app.route('/profile/<username>')
 def profile(username):
-    # Ищем пользователя по имени. Если нет — 404 ошибка
     user = User.query.filter_by(username=username).first_or_404()
-
-    # Получаем все треки этого пользователя
     tracks = Track.query.filter_by(user_id=user.id).order_by(Track.uploaded_at.desc()).all()
 
     return render_template('profile.html', user=user, tracks=tracks)
@@ -136,11 +134,10 @@ def upload_track():
 
         if audio_file and audio_file.filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO:
             filename = secure_filename(audio_file.filename)
-            moskow_zone = timezone(timedelta(hours=3))
-            timestamp = datetime.now(moskow_zone).strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now(MOSCOW_TZ).strftime('%Y%m%d_%H%M%S')
             filename = f'{timestamp}_{filename}'
 
-            upload_folder = os.path.join(app.root_path, 'static/uploads')
+            upload_folder = os.path.join(app.root_path, Config.UPLOAD_FOLDER)
             os.makedirs(upload_folder, exist_ok=True)
             file_path = os.path.join(upload_folder, filename)
             audio_file.save(file_path)
@@ -159,18 +156,20 @@ def upload_track():
         if cover_file and cover_file.filename != '':
             ext = cover_file.filename.rsplit('.', 1)[1].lower()
             if ext in ALLOWED_IMAGES:
-                cover_filename = secure_filename(f"{form.title.data}.{ext}")
-                cover_folder = os.path.join(app.root_path, 'static/images/covers_download')
+                cover_timestamp = datetime.now(MOSCOW_TZ).strftime('%Y%m%d_%H%M%S')
+                cover_filename = secure_filename(f"cover_{current_user.id}_{cover_timestamp}.{ext}")
+
+                cover_folder = os.path.join(app.root_path, Config.COVERS_DOWNLOAD_FOLDER)
                 os.makedirs(cover_folder, exist_ok=True)
                 cover_file.save(os.path.join(cover_folder, cover_filename))
-                cover_path = f'covers_download/{cover_filename}'
+
+                cover_path = f'images/covers_download/{cover_filename}'
             else:
                 flash('Обложка должна быть в формате PNG, JPG или GIF (использована случайная)', 'warning')
                 cover_path = get_random_default_cover()
         else:
             cover_path = get_random_default_cover()
 
-        # === 3. Сохраняем в базу ===
         new_track = Track(
             title=form.title.data,
             artist=form.artist.data,
@@ -178,7 +177,8 @@ def upload_track():
             file_path=f'uploads/{filename}',
             cover_path=cover_path,
             duration=duration_seconds,
-            author=current_user
+            author=current_user,
+            source='manual'
         )
         db.session.add(new_track)
         db.session.commit()
@@ -187,12 +187,6 @@ def upload_track():
         return redirect(url_for('music_library'))
 
     return render_template('upload.html', form=form)
-
-
-
-@app.route('/static/images/covers_download/<path:filename>')
-def serve_upload(filename):
-    return send_from_directory('static/images/covers_download/', filename)
 
 
 @app.route('/upload_avatar', methods=['POST'])
@@ -207,8 +201,7 @@ def upload_avatar():
         flash('Файл не выбран', 'danger')
         return redirect(url_for('settings'))
 
-    # Разрешаем только картинки
-    if file and (file.filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}):
+    if file and (file.filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGES):
         filename = secure_filename(f"user_{current_user.id}_{file.filename}")
         upload_folder = os.path.join(app.root_path, 'static/uploads/avatar')
         os.makedirs(upload_folder, exist_ok=True)
@@ -257,6 +250,56 @@ def delete_track(track_id):
     db.session.commit()
 
     return jsonify({'success': True, 'message': 'Трек успешно удалён'})
+
+
+# ===== МОЯ СТАТИСТИКА =====
+@app.route('/stats/<username>')
+def user_stats(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    tracks = Track.query.filter_by(user_id=user.id).all()
+
+    # Общая статистика
+    total_tracks = len(tracks)
+    total_duration = sum(t.duration or 0 for t in tracks)
+    total_plays = sum(t.plays or 0 for t in tracks)
+
+    # Топ-жанры
+    genre_counts = {}
+    for t in tracks:
+        genre_counts[t.genre] = genre_counts.get(t.genre, 0) + 1
+    top_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:Config.TOP_LIMIT]
+    top_tracks = sorted(tracks, key=lambda t: t.plays or 0, reverse=True)[:Config.TOP_LIMIT]
+
+    hours = total_duration // 3600
+    minutes = (total_duration % 3600) // 60
+
+    return render_template('user_stats.html',
+                           user=user,
+                           total_tracks=total_tracks,
+                           total_plays=total_plays,
+                           hours=hours,
+                           minutes=minutes,
+                           top_genres=top_genres,
+                           top_tracks=top_tracks)
+
+
+# ===== ТРЕКИ, ДОБАВЛЕННЫЕ ВРУЧНУЮ =====
+@app.route('/tracks-manual/<username>')
+def user_tracks_manual(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    # Показываем треки, у которых нет поля source или source == 'manual'
+    tracks = Track.query.filter_by(user_id=user.id).filter(
+        (Track.source == 'manual') | (Track.source == None)
+    ).order_by(Track.uploaded_at.desc()).all()
+    return render_template('user_tracks_manual.html', user=user, tracks=tracks)
+
+
+# ===== ТРЕКИ, ДОБАВЛЕННЫЕ ИЗ JSON =====
+@app.route('/tracks-json/<username>')
+def user_tracks_json(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    tracks = Track.query.filter_by(user_id=user.id, source='json').order_by(Track.uploaded_at.desc()).all()
+    return render_template('user_tracks_json.html', user=user, tracks=tracks)
 
 
 @app.route('/logout')

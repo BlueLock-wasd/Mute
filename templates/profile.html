@@ -6,54 +6,60 @@
 <div class="container mt-4">
     <div class="row">
         <div class="col-lg-8 mx-auto">
-            
+
             <!-- Шапка профиля -->
-            <div class="glass-card p-4 text-center mb-4">
-                <img src="{{ url_for('static', filename='uploads/' + (user.avatar_url if user.avatar_url else 'avatar/default.png')) }}"
-                     class="rounded-circle mb-3" 
-                     width="120" height="120" 
-                     style="object-fit: cover; border: 3px solid var(--neon-blue);">
-                
-                <h2 class="mb-1">{{ user.username }}</h2>
-                <p class="text-profile mb-3">
-                    <i class="bi bi-envelope"></i> {{ user.email }}<br>
-                    <small>На сайте с: {{ user.created_at.strftime('%d.%m.%Y') }}</small>
-                    {% if user.role == 'admin' %}
-                        <span class="badge bg-warning text-dark ms-2">Администратор</span>
+            <div class="glass-card p-4 text-center mb-4 position-relative">
+                <!-- Декоративная подсветка -->
+                <div style="position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,200,255,0.15), transparent 70%); pointer-events: none;"></div>
+
+                <div class="position-relative">
+                    <img src="{{ url_for('static', filename='uploads/' + (user.avatar_url if user.avatar_url else 'avatar/default.png')) }}"
+                         class="rounded-circle mb-3"
+                         width="120" height="120"
+                         style="object-fit: cover; border: 3px solid var(--neon-blue); box-shadow: 0 0 30px rgba(0, 200, 255, 0.4);">
+
+                    <h2 class="mb-1">{{ user.username }}</h2>
+
+                    <p class="text-profile mb-3">
+                        <i class="bi bi-envelope"></i> {{ user.email }}<br>
+                        <small>На сайте с: {{ user.created_at.strftime('%d.%m.%Y') }}</small>
+                        {% if user.role == 'admin' %}
+                            <span class="badge bg-warning text-dark ms-2">Администратор</span>
+                        {% endif %}
+                    </p>
+
+                    <!-- Кнопка настроек -->
+                    {% if current_user.is_authenticated and current_user.id == user.id %}
+                        <a href="{{ url_for('settings') }}" class="btn btn-neon btn-sm mb-3">
+                            <i class="bi bi-gear"></i> Настройки
+                        </a>
                     {% endif %}
-                </p>
-                
-                <!-- Если это свой профиль, показываем кнопку настроек -->
-                {% if current_user.is_authenticated and current_user.id == user.id %}
-                    <a href="{{ url_for('settings') }}" class="btn btn-neon btn-sm">
-                        <i class="bi bi-gear"></i> Настройки
-                    </a>
-                {% endif %}
-            </div>
-
-
-            <!-- Список треков пользователя -->
-
-            {% for track in tracks %}
-            <div class="col-md-6">
-                <div class="glass-card p-3 d-flex align-items-center">
-                    <div style="width: 60px; height: 60px; border-radius: 12px; overflow: hidden; margin-right: 15px; flex-shrink: 0;">
-                        <img src="{{ url_for('static', filename=track.cover_path) }}"
-                             alt="{{ track.title }}"
-                             style="width: 100%; height: 100%; object-fit: cover;"
-                             onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-0 fw-bold">{{ track.title }}</h6>
-                        <small class="text-profile">{{ track.artist }} • {{ track.genre }}</small>
-                    </div>
-                    <a href="#" class="btn btn-outline-light btn-sm rounded-circle"
-                       onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
-                        <i class="bi bi-play-fill"></i>
-                    </a>
                 </div>
-            </div>
-            {% endfor %}
+
+                <!-- КНОПКИ-ССЫЛКИ -->
+                <div class="row g-3 mt-3">
+                    <div class="col-md-4">
+                        <a href="{{ url_for('user_stats', username=user.username) }}" class="btn btn-outline-light w-100 py-3" style="border-color: var(--neon-blue); color: white;">
+                            <i class="bi bi-graph-up-arrow fs-3 d-block mb-2" style="color: var(--neon-blue);"></i>
+                            <div class="fw-bold">Моя статистика</div>
+                            <small class="text-subdued">Прослушивания, топ-жанры</small>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url_for('user_tracks_manual', username=user.username) }}" class="btn btn-outline-light w-100 py-3" style="border-color: var(--neon-blue); color: white;">
+                            <i class="bi bi-upload fs-3 d-block mb-2" style="color: var(--neon-blue);"></i>
+                            <div class="fw-bold">Добавленные вручную</div>
+                            <small class="text-subdued">Через форму загрузки</small>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{{ url_for('user_tracks_json', username=user.username) }}" class="btn btn-outline-light w-100 py-3" style="border-color: #ff00e4; color: white;">
+                            <i class="bi bi-file-earmark-code fs-3 d-block mb-2" style="color: #ff00e4;"></i>
+                            <div class="fw-bold">Добавленные из JSON</div>
+                            <small class="text-subdued">Импортированные треки</small>
+                        </a>
+                    </div>
+                </div>
             </div>
 
         </div>

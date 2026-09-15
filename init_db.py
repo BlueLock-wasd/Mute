@@ -1,6 +1,7 @@
 from app import app, db
 from models import User
 from werkzeug.security import generate_password_hash
+from config import Config
 
 with app.app_context():
     # Удаляем старые таблицы (если есть)
@@ -13,9 +14,9 @@ with app.app_context():
 
     # Добавляем админа
     admin = User(
-        username='admin',
-        email='admin@mute.ru',
-        password_hash=generate_password_hash('admin123'),
+        username=Config.ADMIN_USERNAME,
+        email=Config.ADMIN_EMAIL,
+        password_hash=generate_password_hash(Config.ADMIN_PASSWORD),
         role='admin'
     )
     db.session.add(admin)
