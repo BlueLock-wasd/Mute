@@ -29,7 +29,7 @@
                                 <img src="{{ url_for('static', filename=track.cover_path) }}"
                                      alt="{{ track.title }}"
                                      style="width: 100%; height: 100%; object-fit: cover;"
-                                     onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
+                                     onerror="this.src='{{ default_cover_url }}'">
                             </div>
                             <small class="text-truncate d-block fw-bold" style="font-size: 0.8rem;">{{ track.title }}</small>
                             <small class="text-subdued d-block" style="font-size: 0.7rem;">{{ track.artist }}</small>
@@ -46,7 +46,8 @@
                             <div class="small fw-bold">{{ user.username }}</div>
                             <div class="small text-subdued">{{ tracks|length }} треков</div>
                         </div>
-                        <button class="btn btn-neon btn-sm ms-auto rounded-circle" style="width: 30px; height: 30px; padding: 0;">
+                        <button class="btn btn-neon btn-sm ms-auto rounded-circle play-library-btn"
+                                style="width: 30px; height: 30px; padding: 0;">
                             <i class="bi bi-play-fill" style="font-size: 14px;"></i>
                         </button>
                     </div>
@@ -85,7 +86,7 @@
                             <tr style="transition: background 0.2s; cursor: default; border-bottom: 1px solid rgba(255,255,255,0.05);"
                                 data-track-id="{{ track.id }}"
                                 data-track-index="{{ loop.index0 }}"
-                                data-track-url="/static/{{ track.file_path }}"
+                                data-track-url="{{ url_for('static', filename=track.file_path) }}"
                                 data-track-title="{{ track.title }}"
                                 data-track-artist="{{ track.artist }}">
 
@@ -96,13 +97,19 @@
                                     <img src="{{ url_for('static', filename=track.cover_path) }}"
                                          alt="{{ track.title }}"
                                          style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;"
-                                         onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
+                                         onerror="this.src='{{ default_cover_url }}'">
                                 </td>
 
                                 <!-- PLAY -->
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-outline-light rounded-circle"
-                                            onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
+                                            onclick="addToQueue(
+                                                '{{ url_for('static', filename=track.file_path) }}',
+                                                '{{ track.title|e }}',
+                                                '{{ track.artist|e }}',
+                                                '{{ url_for('static', filename=track.cover_path) }}',
+                                                true
+                                            )">
                                         <i class="bi bi-play-fill"></i>
                                     </button>
                                 </td>
@@ -120,8 +127,9 @@
 
                                 <!-- УДАЛЕНИЕ -->
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-danger rounded-circle"
-                                            onclick="deleteTrack({{ track.id }}, '{{ track.title }}')">
+                                    <button class="btn btn-sm btn-outline-danger rounded-circle delete-track-btn"
+                                            data-track-id="{{ track.id }}"
+                                            data-track-title="{{ track.title }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -139,8 +147,21 @@
                 </div>
             </div>
         </div>
-
     </div>
-
 </div>
+
+<script>
+document.querySelector('.play-library-btn')?.addEventListener('click', function() {
+    const rows = document.querySelectorAll('#library-tbody tr[data-track-url]');
+    rows.forEach((row, idx) => {
+        addToQueue(
+            row.dataset.trackUrl,
+            row.dataset.trackTitle,
+            row.dataset.trackArtist,
+            row.dataset.trackCover || '',
+            idx === 0
+        );
+    });
+});
+</script>
 {% endblock %}

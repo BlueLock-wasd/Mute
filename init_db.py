@@ -17,7 +17,7 @@ with app.app_context():
         username=Config.ADMIN_USERNAME,
         email=Config.ADMIN_EMAIL,
         password_hash=generate_password_hash(Config.ADMIN_PASSWORD),
-        role='admin'
+        role=Config.ROLE_ADMIN
     )
     db.session.add(admin)
     db.session.commit()

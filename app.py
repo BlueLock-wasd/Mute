@@ -5,12 +5,12 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 from mutagen import File as MutagenFile
 import os
-
+import random
+from sqlalchemy import or_
 
 from config import Config
 from models import db, User, Track
 from forms import LoginForm, RegisterForm, UploadTrackForm
-import random
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -20,33 +20,49 @@ db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-ALLOWED_AUDIO = {'mp3', 'wav'}
-ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'gif'}
-
 MOSCOW_TZ = timezone(timedelta(hours=Config.TIMEZONE_OFFSET))
 
+
+@app.context_processor
+def inject_config():
+    return {
+        'Config': Config,
+        'default_cover_url': url_for('static', filename=Config.DEFAULT_COVER),
+        'default_avatar_url': url_for('static', filename=Config.DEFAULT_AVATAR),
+    }
+
+
+def get_now_str():
+    """Текущее время в Москве в формате из конфига."""
+    return datetime.now(MOSCOW_TZ).strftime(Config.TIMESTAMP_FORMAT)
+
+
+def extensions_to_str(exts):
+    """Превращает set расширений в строку 'PNG, JPG, GIF'."""
+    return ', '.join(sorted(e.upper() for e in exts))
+
+
 def get_random_default_cover():
-    default_folder = os.path.join(app.root_path, 'static/images/covers_default')
+    default_folder = os.path.join(app.root_path, Config.COVERS_DEFAULT_FOLDER)
     default_covers = [f for f in os.listdir(default_folder)
-                      if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+                      if f.lower().endswith(Config.ALLOWED_IMAGE_SUFFIXES)]
 
     if default_covers:
-        return f'images/covers_default/{random.choice(default_covers)}'
-    else:
-        return 'images/covers_default/default_1.jpg'
+        return f'{Config.COVERS_DEFAULT_URL_PREFIX}/{random.choice(default_covers)}'
+    return f'{Config.COVERS_DEFAULT_URL_PREFIX}/{Config.DEFAULT_COVER_NAME}'
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 @app.template_filter('format_duration')
 def format_duration(seconds):
     if not seconds:
-        return '0:00'
-    m = seconds // 60
-    s = seconds % 60
+        return Config.DURATION_ZERO
+    m = seconds // Config.SECONDS_PER_MINUTE
+    s = seconds % Config.SECONDS_PER_MINUTE
     return f'{m}:{s:02d}'
 
 
@@ -69,9 +85,9 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password_hash, form.password.data):
             login_user(user)
-            flash('Вы успешно вошли!', 'success')
+            flash(Config.MSG_LOGIN_SUCCESS, 'success')
             return redirect(url_for('index'))
-        flash('Неверное имя или пароль', 'danger')
+        flash(Config.MSG_LOGIN_FAILED, 'danger')
 
     return render_template('login.html', form=form)
 
@@ -90,7 +106,7 @@ def register():
         )
         db.session.add(user)
         db.session.commit()
-        flash('Регистрация успешна! Теперь войдите', 'success')
+        flash(Config.MSG_REGISTER_SUCCESS, 'success')
         return redirect(url_for('login'))
 
     return render_template('register.html', form=form)
@@ -132,10 +148,9 @@ def upload_track():
         audio_file = form.audio_file.data
         cover_file = form.cover_file.data
 
-        if audio_file and audio_file.filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO:
+        if audio_file and audio_file.filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_AUDIO_EXTENSIONS:
             filename = secure_filename(audio_file.filename)
-            timestamp = datetime.now(MOSCOW_TZ).strftime('%Y%m%d_%H%M%S')
-            filename = f'{timestamp}_{filename}'
+            filename = f'{get_now_str()}_{filename}'
 
             upload_folder = os.path.join(app.root_path, Config.UPLOAD_FOLDER)
             os.makedirs(upload_folder, exist_ok=True)
@@ -146,26 +161,26 @@ def upload_track():
                 audio = MutagenFile(file_path)
                 duration_seconds = int(audio.info.length) if audio and hasattr(audio.info, 'length') else 0
             except Exception as e:
-                print(f"⚠️ Не удалось прочитать длительность: {e}")
+                app.logger.warning(f"Не удалось прочитать длительность: {e}")
                 duration_seconds = 0
         else:
-            flash('Пожалуйста, загрузите файл в формате MP3 или WAV', 'danger')
+            exts = extensions_to_str(Config.ALLOWED_AUDIO_EXTENSIONS)
+            flash(Config.MSG_INVALID_AUDIO.format(exts=exts), 'danger')
             return render_template('upload.html', form=form)
 
-        cover_path = None
         if cover_file and cover_file.filename != '':
             ext = cover_file.filename.rsplit('.', 1)[1].lower()
-            if ext in ALLOWED_IMAGES:
-                cover_timestamp = datetime.now(MOSCOW_TZ).strftime('%Y%m%d_%H%M%S')
-                cover_filename = secure_filename(f"cover_{current_user.id}_{cover_timestamp}.{ext}")
+            if ext in Config.ALLOWED_IMAGE_EXTENSIONS:
+                cover_filename = secure_filename(f"cover_{current_user.id}_{get_now_str()}.{ext}")
 
                 cover_folder = os.path.join(app.root_path, Config.COVERS_DOWNLOAD_FOLDER)
                 os.makedirs(cover_folder, exist_ok=True)
                 cover_file.save(os.path.join(cover_folder, cover_filename))
 
-                cover_path = f'images/covers_download/{cover_filename}'
+                cover_path = f'{Config.COVERS_DOWNLOAD_URL_PREFIX}/{cover_filename}'
             else:
-                flash('Обложка должна быть в формате PNG, JPG или GIF (использована случайная)', 'warning')
+                exts = extensions_to_str(Config.ALLOWED_IMAGE_EXTENSIONS)
+                flash(Config.MSG_COVER_FALLBACK.format(exts=exts), 'warning')
                 cover_path = get_random_default_cover()
         else:
             cover_path = get_random_default_cover()
@@ -174,16 +189,16 @@ def upload_track():
             title=form.title.data,
             artist=form.artist.data,
             genre=form.genre.data,
-            file_path=f'uploads/{filename}',
+            file_path=f'{Config.UPLOAD_URL_PREFIX}/{filename}',
             cover_path=cover_path,
             duration=duration_seconds,
             author=current_user,
-            source='manual'
+            source=Config.SOURCE_MANUAL
         )
         db.session.add(new_track)
         db.session.commit()
 
-        flash('Трек успешно загружен!', 'success')
+        flash(Config.MSG_UPLOAD_SUCCESS, 'success')
         return redirect(url_for('music_library'))
 
     return render_template('upload.html', form=form)
@@ -193,25 +208,26 @@ def upload_track():
 @login_required
 def upload_avatar():
     if 'avatar' not in request.files:
-        flash('Файл не выбран', 'danger')
+        flash(Config.MSG_FILE_NOT_SELECTED, 'danger')
         return redirect(url_for('settings'))
 
     file = request.files['avatar']
     if file.filename == '':
-        flash('Файл не выбран', 'danger')
+        flash(Config.MSG_FILE_NOT_SELECTED, 'danger')
         return redirect(url_for('settings'))
 
-    if file and (file.filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGES):
+    if file and (file.filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_IMAGE_EXTENSIONS):
         filename = secure_filename(f"user_{current_user.id}_{file.filename}")
-        upload_folder = os.path.join(app.root_path, 'static/uploads/avatar')
+        upload_folder = os.path.join(app.root_path, Config.AVATAR_FOLDER)
         os.makedirs(upload_folder, exist_ok=True)
         file.save(os.path.join(upload_folder, filename))
 
-        current_user.avatar_url = filename
+        current_user.avatar_url = f'{Config.AVATAR_URL_PREFIX}/{filename}'
         db.session.commit()
-        flash('Аватар обновлён!', 'success')
+        flash(Config.MSG_AVATAR_SUCCESS, 'success')
     else:
-        flash('Недопустимый формат файла (только PNG, JPG, GIF)', 'danger')
+        exts = extensions_to_str(Config.ALLOWED_IMAGE_EXTENSIONS)
+        flash(Config.MSG_INVALID_IMAGE.format(exts=exts), 'danger')
 
     return redirect(url_for('settings'))
 
@@ -223,7 +239,7 @@ def reorder_tracks():
     track_ids = data.get('track_ids', [])
 
     for index, track_id in enumerate(track_ids):
-        track = Track.query.get(track_id)
+        track = db.session.get(Track, track_id)
         if track and track.user_id == current_user.id:
             track.track_order = index
 
@@ -236,20 +252,20 @@ def reorder_tracks():
 def delete_track(track_id):
     track = Track.query.get_or_404(track_id)
 
-    if track.user_id != current_user.id and current_user.role != 'admin':
-        return jsonify({'success': False, 'message': 'У вас нет прав для удаления этого трека'}), 403
+    if track.user_id != current_user.id and current_user.role != Config.ROLE_ADMIN:
+        return jsonify({'success': False, 'message': Config.MSG_NO_DELETE_RIGHTS}), 403
 
     try:
-        file_path = os.path.join(app.root_path, 'static', track.file_path)
+        file_path = os.path.join(app.root_path, Config.STATIC_FOLDER, track.file_path)
         if os.path.exists(file_path):
             os.remove(file_path)
     except Exception as e:
-        print(f"Ошибка при удалении файла: {e}")
+        app.logger.error(f"Ошибка при удалении файла: {e}")
 
     db.session.delete(track)
     db.session.commit()
 
-    return jsonify({'success': True, 'message': 'Трек успешно удалён'})
+    return jsonify({'success': True, 'message': Config.MSG_DELETE_SUCCESS})
 
 
 # ===== МОЯ СТАТИСТИКА =====
@@ -270,8 +286,8 @@ def user_stats(username):
     top_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:Config.TOP_LIMIT]
     top_tracks = sorted(tracks, key=lambda t: t.plays or 0, reverse=True)[:Config.TOP_LIMIT]
 
-    hours = total_duration // 3600
-    minutes = (total_duration % 3600) // 60
+    hours = total_duration // Config.SECONDS_PER_HOUR
+    minutes = (total_duration % Config.SECONDS_PER_HOUR) // Config.SECONDS_PER_MINUTE
 
     return render_template('user_stats.html',
                            user=user,
@@ -287,9 +303,8 @@ def user_stats(username):
 @app.route('/tracks-manual/<username>')
 def user_tracks_manual(username):
     user = User.query.filter_by(username=username).first_or_404()
-    # Показываем треки, у которых нет поля source или source == 'manual'
     tracks = Track.query.filter_by(user_id=user.id).filter(
-        (Track.source == 'manual') | (Track.source == None)
+        (Track.source == Config.SOURCE_MANUAL) | (Track.source == None)
     ).order_by(Track.uploaded_at.desc()).all()
     return render_template('user_tracks_manual.html', user=user, tracks=tracks)
 
@@ -298,7 +313,7 @@ def user_tracks_manual(username):
 @app.route('/tracks-json/<username>')
 def user_tracks_json(username):
     user = User.query.filter_by(username=username).first_or_404()
-    tracks = Track.query.filter_by(user_id=user.id, source='json').order_by(Track.uploaded_at.desc()).all()
+    tracks = Track.query.filter_by(user_id=user.id, source=Config.SOURCE_JSON).order_by(Track.uploaded_at.desc()).all()
     return render_template('user_tracks_json.html', user=user, tracks=tracks)
 
 
@@ -306,8 +321,8 @@ def user_tracks_json(username):
 @login_required
 def logout():
     logout_user()
-    flash('Вы вышли', 'danger')
-    return redirect('/')
+    flash(Config.MSG_LOGOUT, 'danger')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=Config.DEBUG)

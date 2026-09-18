@@ -13,11 +13,11 @@
                 <div style="position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,200,255,0.15), transparent 70%); pointer-events: none;"></div>
 
                 <div class="position-relative">
-                    <img src="{{ url_for('static', filename='uploads/' + (user.avatar_url if user.avatar_url else 'avatar/default.png')) }}"
+                    {% set avatar = user.avatar_url or Config.DEFAULT_AVATAR %}
+                    <img src="{{ url_for('static', filename=avatar) }}"
                          class="rounded-circle mb-3"
                          width="120" height="120"
                          style="object-fit: cover; border: 3px solid var(--neon-blue); box-shadow: 0 0 30px rgba(0, 200, 255, 0.4);">
-
                     <h2 class="mb-1">{{ user.username }}</h2>
 
                     <p class="text-profile mb-3">
