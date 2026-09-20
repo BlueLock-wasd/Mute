@@ -18,14 +18,14 @@
                 <div style="width: 60px; height: 60px; border-radius: 12px; overflow: hidden; margin-right: 15px; flex-shrink: 0;">
                     <img src="{{ url_for('static', filename=track.cover_path) }}"
                          style="width: 100%; height: 100%; object-fit: cover;"
-                         onerror="this.src='{{ url_for('static', filename='images/covers_default/default_1.jpg') }}'">
+                         onerror="this.src='{{ default_cover_url }}'">
                 </div>
                 <div class="flex-grow-1">
                     <h6 class="mb-0 fw-bold">{{ track.title }}</h6>
                     <small class="text-subdued">{{ track.artist }} • {{ track.genre }}</small>
                 </div>
                 <button class="btn btn-outline-light btn-sm rounded-circle"
-                        onclick="addToQueue('/static/{{ track.file_path }}', '{{ track.title }}', '{{ track.artist }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
+                        onclick="addToQueue('{{ url_for('static', filename=track.file_path) }}', '{{ track.title|e }}', '{{ track.artist|e }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
                     <i class="bi bi-play-fill"></i>
                 </button>
             </div>

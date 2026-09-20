@@ -47,7 +47,7 @@
                             <div class="small text-subdued">{{ tracks|length }} треков</div>
                         </div>
                         <button class="btn btn-neon btn-sm ms-auto rounded-circle play-library-btn"
-                                style="width: 30px; height: 30px; padding: 0;">
+                                style="width: 30px; height: 30px; padding: 0;" onclick="playLibrary()">
                             <i class="bi bi-play-fill" style="font-size: 14px;"></i>
                         </button>
                     </div>
@@ -151,7 +151,7 @@
 </div>
 
 <script>
-document.querySelector('.play-library-btn')?.addEventListener('click', function() {
+function playLibrary() {
     const rows = document.querySelectorAll('#library-tbody tr[data-track-url]');
     rows.forEach((row, idx) => {
         addToQueue(
@@ -162,6 +162,6 @@ document.querySelector('.play-library-btn')?.addEventListener('click', function(
             idx === 0
         );
     });
-});
+}
 </script>
 {% endblock %}

@@ -23,7 +23,7 @@
                     <p class="text-profile mb-3">
                         <i class="bi bi-envelope"></i> {{ user.email }}<br>
                         <small>На сайте с: {{ user.created_at.strftime('%d.%m.%Y') }}</small>
-                        {% if user.role == 'admin' %}
+                        {% if user.role == Config.ROLE_ADMIN %}
                             <span class="badge bg-warning text-dark ms-2">Администратор</span>
                         {% endif %}
                     </p>
