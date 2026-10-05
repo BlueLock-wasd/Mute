@@ -12,7 +12,9 @@ class Config:
 
     # ===== Время =====
     TIMEZONE_OFFSET = int(os.environ.get('TIMEZONE_OFFSET', 3))
-    TIMESTAMP_FORMAT = '%Y%m%d_%H%M%S'
+    TIMESTAMP_FORMAT = '%Y%m%d_%H%M%S'   
+    MONTH_KEY_FORMAT = '%Y-%m'
+    MONTH_LABEL_FORMAT = '%m.%y'
     SECONDS_PER_MINUTE = 60
     SECONDS_PER_HOUR = 3600
     DURATION_ZERO = '0:00'
@@ -91,3 +93,32 @@ class Config:
         ('lofi', 'Lo-fi'),
         ('electronic', 'Электроника'),
     ]
+
+    # ===== Цвета графиков =====
+    CHART_COLORS = [
+        '#00c8ff',  # neon-blue
+        '#ff00e4',  # neon-pink
+        '#ffc107',  # yellow
+        '#28a745',  # green
+        '#dc3545',  # red
+        '#6f42c1',  # purple
+        '#fd7e14',  # orange
+        '#20c997',  # teal
+    ]
+    CHART_BORDER_COLOR = 'rgba(11, 16, 38, 0.9)'
+    CHART_TEXT_COLOR = '#a0a5b9'
+    CHART_GRID_COLOR = 'rgba(255, 255, 255, 0.1)'
+    CHART_FONT_FAMILY = "'Segoe UI', Tahoma, sans-serif"
+
+    # ===== Настройки графиков =====
+    CHART_BAR_ALPHA = 0.5          # Прозрачность заливки столбцов
+    CHART_BAR_BORDER_WIDTH = 2      # Толщина рамки столбцов
+    CHART_BAR_RADIUS = 8            # Скругление углов столбцов
+    CHART_LINE_WIDTH = 3            # Толщина линии
+    CHART_LINE_TENSION = 0.4        # Плавность линии
+    CHART_LINE_FILL_ALPHA = 0.15    # Прозрачность под линией
+    CHART_POINT_RADIUS = 5          # Размер точек на линии
+    CHART_POINT_HOVER_RADIUS = 8    # Размер точек при наведении
+
+    # ===== Месяцы для графика динамики =====
+    CHART_MONTHS_COUNT = 12         # Сколько месяцев показывать

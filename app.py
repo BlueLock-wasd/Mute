@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 from mutagen import File as MutagenFile
+from collections import OrderedDict
 import os
 
 import random
@@ -11,6 +12,7 @@ import random
 from config import Config
 from models import db, User, Track
 from forms import LoginForm, RegisterForm, UploadTrackForm
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -21,7 +23,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 MOSCOW_TZ = timezone(timedelta(hours=Config.TIMEZONE_OFFSET))
-
+now = datetime.now(timezone.utc)
 
 @app.context_processor
 def inject_config():
@@ -29,6 +31,7 @@ def inject_config():
         'Config': Config,
         'default_cover_url': url_for('static', filename=Config.DEFAULT_COVER),
         'default_avatar_url': url_for('static', filename=Config.DEFAULT_AVATAR),
+        'chart_colors': Config.CHART_COLORS,
     }
 
 
@@ -65,14 +68,12 @@ def format_duration(seconds):
     s = seconds % Config.SECONDS_PER_MINUTE
     return f'{m}:{s:02d}'
 
-
 @app.route('/')
 def index():
-    tracks = Track.query.order_by(Track.uploaded_at.desc()).limit(Config.HOME_TRACKS_LIMIT).all()
     user_tracks = []
     if current_user.is_authenticated:
         user_tracks = Track.query.filter_by(user_id=current_user.id).order_by(Track.uploaded_at.desc()).all()
-    return render_template('index.html', tracks=tracks, user_tracks=user_tracks)    
+    return render_template('index.html', user_tracks=user_tracks)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -267,25 +268,72 @@ def delete_track(track_id):
 
     return jsonify({'success': True, 'message': Config.MSG_DELETE_SUCCESS})
 
-
 # ===== МОЯ СТАТИСТИКА =====
 @app.route('/stats/<username>')
 def user_stats(username):
     user = User.query.filter_by(username=username).first_or_404()
     tracks = Track.query.filter_by(user_id=user.id).all()
 
-    # Общая статистика
+    # ===== ОБЩАЯ СТАТИСТИКА =====
     total_tracks = len(tracks)
     total_duration = sum(t.duration or 0 for t in tracks)
     total_plays = sum(t.plays or 0 for t in tracks)
+    avg_duration = total_duration // total_tracks if total_tracks > 0 else 0
 
-    # Топ-жанры
+    # ===== ТОП-ЖАНРЫ =====
     genre_counts = {}
     for t in tracks:
         genre_counts[t.genre] = genre_counts.get(t.genre, 0) + 1
-    top_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:Config.TOP_LIMIT]
-    top_tracks = sorted(tracks, key=lambda t: t.plays or 0, reverse=True)[:Config.TOP_LIMIT]
+    top_genres = sorted(
+        genre_counts.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:Config.TOP_LIMIT]
 
+    # ===== ТОП-ТРЕКИ ПО ПРОСЛУШИВАНИЯМ =====
+    top_tracks = sorted(
+        tracks,
+        key=lambda t: t.plays or 0,
+        reverse=True
+    )[:Config.TOP_LIMIT]
+
+    # ===== ТОП-ТРЕКИ ПО ДЛИТЕЛЬНОСТИ =====
+    longest_tracks = sorted(
+        tracks,
+        key=lambda t: t.duration or 0,
+        reverse=True
+    )[:Config.TOP_LIMIT]
+
+    # ===== ДИНАМИКА ЗАГРУЗОК ЗА N МЕСЯЦЕВ =====
+    now = datetime.now(timezone.utc)
+    months_data = OrderedDict()
+
+    # Заполняем месяцы (количество из Config)
+    for i in range(Config.CHART_MONTHS_COUNT - 1, -1, -1):
+        year = now.year
+        month = now.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        key = f'{year}-{month:02d}'
+        months_data[key] = 0
+
+    # Считаем треки по месяцам
+    for t in tracks:
+        if t.uploaded_at:
+            key = t.uploaded_at.strftime(Config.MONTH_KEY_FORMAT)
+            if key in months_data:
+                months_data[key] += 1
+
+    # Формируем подписи для графика
+    upload_chart_labels = []
+    for k in months_data.keys():
+        dt = datetime.strptime(k, Config.MONTH_KEY_FORMAT)
+        upload_chart_labels.append(dt.strftime(Config.MONTH_LABEL_FORMAT))
+
+    upload_chart_data = list(months_data.values())
+
+    # ===== ФОРМАТИРОВАНИЕ ВРЕМЕНИ =====
     hours = total_duration // Config.SECONDS_PER_HOUR
     minutes = (total_duration % Config.SECONDS_PER_HOUR) // Config.SECONDS_PER_MINUTE
 
@@ -295,9 +343,12 @@ def user_stats(username):
                            total_plays=total_plays,
                            hours=hours,
                            minutes=minutes,
+                           avg_duration=avg_duration,
                            top_genres=top_genres,
-                           top_tracks=top_tracks)
-
+                           top_tracks=top_tracks,
+                           longest_tracks=longest_tracks,
+                           upload_chart_labels=upload_chart_labels,
+                           upload_chart_data=upload_chart_data)
 
 # ===== ТРЕКИ, ДОБАВЛЕННЫЕ ВРУЧНУЮ =====
 @app.route('/tracks-manual/<username>')
@@ -307,7 +358,6 @@ def user_tracks_manual(username):
         (Track.source == Config.SOURCE_MANUAL) | (Track.source == None)
     ).order_by(Track.uploaded_at.desc()).all()
     return render_template('user_tracks_manual.html', user=user, tracks=tracks)
-
 
 # ===== ТРЕКИ, ДОБАВЛЕННЫЕ ИЗ JSON =====
 @app.route('/tracks-json/<username>')

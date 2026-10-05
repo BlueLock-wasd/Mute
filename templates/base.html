@@ -429,14 +429,12 @@ function initLibraryDragDrop() {
 
 
 // Вызываем при загрузке страницы и после SPA-переходов
-document.addEventListener('DOMContentLoaded', initLibraryDragDrop);
+document.addEventListener('DOMContentLoaded', function() {
+    refreshSearchTracks();
+    initLibraryDragDrop();
+    setTimeout(initVisualizer, 200);
+});
 
-// Также вызываем после каждого SPA-обновления
-const originalLoadPage = loadPage;
-loadPage = async function(url) {
-    await originalLoadPage(url);
-    setTimeout(initLibraryDragDrop, 300);
-}
 
 // ===== ДОБАВЛЕНИЕ В ОЧЕРЕДЬ =====
 function addToQueue(url, title, artist, cover, isManual = false) {
@@ -498,20 +496,21 @@ function toggleFavorite() {
     }
 
 function shuffleQueue() {
-        if (queue.length > 1) {
-            // Перемешиваем очередь, но текущий трек оставляем на месте
-            const current = queue[currentIndex];
-            const others = queue.filter((_, i) => i !== currentIndex);
-            // Простой алгоритм перемешивания
-            for (let i = others.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [others[i], others[j]] = [others[j], others[i]];
-            }
-            queue = [current, ...others];
-            currentIndex = 0;
-            console.log('Очередь перемешана!');
-            updateQueueUI();
+    if (queue.length > 1) {
+        // Перемешиваем очередь, но текущий трек оставляем на месте
+        const current = queue[currentIndex];
+        const others = queue.filter((_, i) => i !== currentIndex);
+        // Простой алгоритм перемешивания
+        for (let i = others.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [others[i], others[j]] = [others[j], others[i]];
         }
+        queue = [current, ...others];
+        currentIndex = 0;
+        console.log('Очередь перемешана!');
+        updateQueueUI();
+    }
+}
 
         // === 2. ЗАПУСК ТРЕКА ===
 function playTrack(url, title, artist, cover) {
@@ -535,8 +534,6 @@ function playTrack(url, title, artist, cover) {
             }
         }
     }
-
-
 
     // Обновляем обложку в мини-плеере
     const playerCoverImg = document.querySelector('#player-cover img');
@@ -702,56 +699,71 @@ function playTrack(url, title, artist, cover) {
         document.getElementById('player-title').addEventListener('click', openFullscreen);
 
 
+function deleteTrack(trackId, trackTitle) {
+    if (!confirm(`Вы уверены, что хотите удалить трек "${trackTitle}"?`)) {
+        return;
+    }
 
-        // ===== УДАЛЕНИЕ ТРЕКА ИЗ БИБЛИОТЕКИ =====
-        function deleteTrack(trackId, trackTitle) {
-            if (!confirm(`Вы уверены, что хотите удалить трек "${trackTitle}"?`)) {
-                return;
-            }
-
-            fetch(API_DELETE_URL.replace('/0', '/' + trackId), {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    // Если статус не 200-299, выбрасываем ошибку с кодом
-                    throw new Error(`Ошибка сервера: ${response.status} ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    alert('✅ Трек успешно удалён!');
-                    location.reload();
-                } else {
-                    alert('❌ Ошибка при удалении: ' + (data.message || 'Неизвестная ошибка'));
-                }
-            })
-            .catch(error => {
-                console.error('=== ПОЛНАЯ ОШИБКА ===');
-                console.error(error);
-                alert('Ошибка: ' + error.message + '\n\nПодробности смотрите в консоли (F12 → Console)');
-            });
+    fetch(`/api/delete_track/${trackId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
         }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Ошибка сервера: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('✅ Трек успешно удалён!');
+            location.reload();
+        } else {
+            alert('❌ Ошибка при удалении: ' + (data.message || 'Неизвестная ошибка'));
+        }
+    })
+    .catch(error => {
+        console.error('=== ПОЛНАЯ ОШИБКА ===');
+        console.error(error);
+        alert('Ошибка: ' + error.message + '\n\nПодробности смотрите в консоли (F12 → Console)');
+    });
+}
+
+       // === Обработчик удаления треков ===
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.delete-track-btn');
+    if (btn) {
+        deleteTrack(btn.dataset.trackId, btn.dataset.trackTitle);
+    }
+});
+
+// === SPA-переход по ссылкам (без перезагрузки) ===
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+
+    // Пропускаем: внешние ссылки, анкоры (#), якоря и ссылки с data-no-spa
+    if (!link) return;
+    if (!link.href) return;
+    if (!link.href.startsWith(window.location.origin)) return;
+    if (link.hasAttribute('data-no-spa')) return;
+    if (link.getAttribute('href')?.startsWith('#')) return;
+    if (link.target === '_blank') return;
+
+    // Перехватываем и грузим через SPA
+    e.preventDefault();
+    loadPage(link.href);
+});
 
         // ==========================================
         // ===== SPA (ПЕРЕХОД БЕЗ ПЕРЕЗАГРУЗКИ) =====
         // ==========================================
 
         const mainContent = document.getElementById('main-content');
-
 async function loadPage(url) {
-    if (url === '/' || url === window.location.origin + '/') {
-    setTimeout(() => {
-        if (audio.src && !audio.paused) {
-            initVisualizer();
-        }
-    }, 300);
-}
+    if (!url || url === window.location.href) return;
 
     try {
         const response = await fetch(url, {
@@ -766,36 +778,34 @@ async function loadPage(url) {
             mainContent.innerHTML = newContent.innerHTML;
             window.history.pushState({}, '', url);
 
-            // ===== ЗАПУСК ВИЗУАЛИЗАТОРА НА ГЛАВНОЙ =====
-
-            setTimeout(() => {
-                    if (audio.src && !audio.paused) {
-                        initVisualizer();
-                    }
-                }, 300);
+            // Обновляем треки для поиска
+            if (typeof refreshSearchTracks === 'function') {
+                refreshSearchTracks();
             }
+
+            setTimeout(initLibraryDragDrop, 300)
+
+            // Визуализатор
+            setTimeout(() => {
+                if (audio.src && !audio.paused) {
+                    initVisualizer();
+                }
+            }, 300);
+        }
     } catch (error) {
         console.error('Ошибка загрузки страницы:', error);
         window.location.href = url;
     }
 }
 
-
         window.addEventListener('popstate', () => {
             loadPage(window.location.href);
-        });
-
-        // Перехватываем все клики по ссылкам
-        document.addEventListener('click', function(e) {
-            const btn = e.target.closest('.delete-track-btn');
-            if (!btn) return;
-            deleteTrack(btn.dataset.trackId, btn.dataset.trackTitle);
         });
 
         console.log('✅ SPA mode enabled — плеер продолжит играть!');
 
 
-// ===== АУДИО-ВИЗУАЛИЗАТОР (ГЛАВНАЯ СТРАНИЦА) - ФИНАЛЬНАЯ ВЕРСИЯ =====
+// ===== АУДИО-ВИЗУАЛИЗАТОР (ГЛАВНАЯ СТРАНИЦА) =====
 let audioCtx = null;
 let analyser = null;
 let dataArray = null;
@@ -971,6 +981,138 @@ if (audio.src && !audio.paused) {
         initVisualizer();
     }
 }
+
+
+// Скрипт микс блока
+// ===== ФУНКЦИИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ =====
+function playRandomMix() {
+    const tracks = document.querySelectorAll('[data-track-url]');
+    if (tracks.length > 0) {
+        const randomIndex = Math.floor(Math.random() * tracks.length);
+        const track = tracks[randomIndex];
+        addToQueue(
+            track.dataset.trackUrl,
+            track.dataset.trackTitle,
+            track.dataset.trackArtist,
+            track.dataset.trackCover || '',
+            true
+        );
+    }
+}
+
+function playMood(mood) {
+    console.log('Запускаем поток для настроения:', mood);
+    // Здесь можно добавить фильтрацию треков по жанру из базы
+}
+
+// ===== ЖИВОЙ ПОИСК ТРЕКОВ =====
+let allSearchTracks = [];
+
+function refreshSearchTracks() {
+    const trackCards = document.querySelectorAll('[data-track-url]');
+    allSearchTracks = Array.from(trackCards).map(card => ({
+        url: card.dataset.trackUrl,
+        title: card.dataset.trackTitle,
+        artist: card.dataset.trackArtist,
+        cover: card.dataset.trackCover || ''
+    }));
+    console.log(`📚 Обновлено треков для поиска: ${allSearchTracks.length}`);
+}
+
+function handleSearch(query) {
+    const resultsContainer = document.getElementById('searchResults');
+    if (!resultsContainer) return;
+
+    if (!query || query.trim().length === 0) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+
+    const q = query.toLowerCase().trim();
+    const seen = new Set();
+    const results = allSearchTracks.filter(track => {
+        const matches = track.title.toLowerCase().includes(q) ||
+                        track.artist.toLowerCase().includes(q);
+        if (!matches) return false;
+        const key = (track.title.toLowerCase().trim() + '|' + track.artist.toLowerCase().trim());
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
+    resultsContainer.style.display = 'block';
+
+    if (results.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="search-no-results">
+                <i class="bi bi-search fs-4 d-block mb-2"></i>
+                Ничего не найдено по запросу "${query}"
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    results.slice(0, 10).forEach(track => {
+        const cover = track.cover || '{{ default_cover_url }}';
+        html += `
+            <div class="search-result-item">
+                <img src="${cover}" class="search-result-cover"
+                     onerror="this.src='{{ default_cover_url }}'">
+                <div class="search-result-info">
+                    <div class="search-result-title">${escapeHtml(track.title)}</div>
+                    <div class="search-result-artist">${escapeHtml(track.artist)}</div>
+                </div>
+                <div class="search-result-actions">
+                    <button title="Добавить в очередь"
+                           onclick="event.stopPropagation(); addToQueue('${track.url}', '${escapeJs(track.title)}', '${escapeJs(track.artist)}', '${cover}', true)">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                    <button title="Слушать"
+                           onclick="event.stopPropagation(); addToQueue('${track.url}', '${escapeJs(track.title)}', '${escapeJs(track.artist)}', '${cover}', true)">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    resultsContainer.innerHTML = html;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#039;');
+}
+
+function escapeJs(str) {
+    if (!str) return '';
+    return str.replace(/\\/g, '\\\\')
+              .replace(/'/g, "\\'")
+              .replace(/"/g, '\\"')
+              .replace(/\n/g, '\\n');
+}
+
+// Закрытие результатов поиска при клике вне и Escape
+document.addEventListener('click', function(e) {
+    const searchWrapper = document.querySelector('.search-wrapper');
+    if (searchWrapper && !searchWrapper.contains(e.target)) {
+        const sr = document.getElementById('searchResults');
+        if (sr) sr.style.display = 'none';
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const sr = document.getElementById('searchResults');
+        const si = document.getElementById('searchInput');
+        if (sr) sr.style.display = 'none';
+        if (si) si.blur();
+    }
+});
 
 </script>
 </body>
