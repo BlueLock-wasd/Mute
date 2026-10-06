@@ -4,7 +4,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 from mutagen import File as MutagenFile
-from collections import OrderedDict
 import os
 
 import random
@@ -23,7 +22,6 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 MOSCOW_TZ = timezone(timedelta(hours=Config.TIMEZONE_OFFSET))
-now = datetime.now(timezone.utc)
 
 @app.context_processor
 def inject_config():
@@ -60,13 +58,15 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-@app.template_filter('format_duration')
-def format_duration(seconds):
+@app.template_filter('format_total_time')
+def format_total_time(seconds):
     if not seconds:
         return Config.DURATION_ZERO
-    m = seconds // Config.SECONDS_PER_MINUTE
-    s = seconds % Config.SECONDS_PER_MINUTE
-    return f'{m}:{s:02d}'
+    h = seconds // Config.SECONDS_PER_HOUR
+    m = (seconds % Config.SECONDS_PER_HOUR) // Config.SECONDS_PER_MINUTE
+    if h > 0:
+        return f'{h}ч {m}м'
+    return f'{m}м'
 
 @app.route('/')
 def index():
@@ -268,6 +268,19 @@ def delete_track(track_id):
 
     return jsonify({'success': True, 'message': Config.MSG_DELETE_SUCCESS})
 
+# ===== УВЕЛИЧЕНИЕ ПРОСЛУШИВАНИЙ =====
+@app.route('/api/increment_plays/<int:track_id>', methods=['POST'])
+@login_required
+def increment_plays(track_id):
+    track = db.session.get(Track, track_id)
+    if not track:
+        return jsonify({'success': False, 'message': 'Трек не найден'}), 404
+
+    track.plays = (track.plays or 0) + 1
+    db.session.commit()
+
+    return jsonify({'success': True, 'plays': track.plays})
+
 # ===== МОЯ СТАТИСТИКА =====
 @app.route('/stats/<username>')
 def user_stats(username):
@@ -304,35 +317,6 @@ def user_stats(username):
         reverse=True
     )[:Config.TOP_LIMIT]
 
-    # ===== ДИНАМИКА ЗАГРУЗОК ЗА N МЕСЯЦЕВ =====
-    now = datetime.now(timezone.utc)
-    months_data = OrderedDict()
-
-    # Заполняем месяцы (количество из Config)
-    for i in range(Config.CHART_MONTHS_COUNT - 1, -1, -1):
-        year = now.year
-        month = now.month - i
-        while month <= 0:
-            month += 12
-            year -= 1
-        key = f'{year}-{month:02d}'
-        months_data[key] = 0
-
-    # Считаем треки по месяцам
-    for t in tracks:
-        if t.uploaded_at:
-            key = t.uploaded_at.strftime(Config.MONTH_KEY_FORMAT)
-            if key in months_data:
-                months_data[key] += 1
-
-    # Формируем подписи для графика
-    upload_chart_labels = []
-    for k in months_data.keys():
-        dt = datetime.strptime(k, Config.MONTH_KEY_FORMAT)
-        upload_chart_labels.append(dt.strftime(Config.MONTH_LABEL_FORMAT))
-
-    upload_chart_data = list(months_data.values())
-
     # ===== ФОРМАТИРОВАНИЕ ВРЕМЕНИ =====
     hours = total_duration // Config.SECONDS_PER_HOUR
     minutes = (total_duration % Config.SECONDS_PER_HOUR) // Config.SECONDS_PER_MINUTE
@@ -346,9 +330,8 @@ def user_stats(username):
                            avg_duration=avg_duration,
                            top_genres=top_genres,
                            top_tracks=top_tracks,
-                           longest_tracks=longest_tracks,
-                           upload_chart_labels=upload_chart_labels,
-                           upload_chart_data=upload_chart_data)
+                           longest_tracks=longest_tracks)
+
 
 # ===== ТРЕКИ, ДОБАВЛЕННЫЕ ВРУЧНУЮ =====
 @app.route('/tracks-manual/<username>')

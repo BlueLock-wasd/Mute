@@ -3,7 +3,7 @@
 {% block title %}Библиотека - MUTE{% endblock %}
 
 {% block content %}
-<canvas id="visualizerCanvas" style="width: 100%; height: 80px;"></canvas>
+<canvas id="visualizerCanvas" style="border-radius: 50px;"></canvas>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -16,6 +16,7 @@
     {% for track in tracks %}
     <div class="col-md-4">
         <div class="glass-card p-3 h-100"
+             data-track-id="{{ track.id }}"
              data-track-url="{{ url_for('static', filename=track.file_path) }}"
              data-track-title="{{ track.title }}"
              data-track-artist="{{ track.artist }}"

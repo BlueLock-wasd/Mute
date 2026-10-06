@@ -1,37 +1,92 @@
 {% extends "base.html" %}
 
-{% block title %}JSON треки {{ user.username }} - MUTE{% endblock %}
+{% block title %}Треки {{ user.username }} - MUTE{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row">
-        <div class="col-lg-8 mx-auto">
+        <div class="col-lg-10 mx-auto">
 
+            <!-- Кнопка назад -->
             <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-outline-light btn-sm mb-4">
                 <i class="bi bi-arrow-left"></i> Назад в профиль
             </a>
 
-            <h2 class="mb-4"><i class="bi bi-file-earmark-code"></i> Треки из JSON</h2>
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                   <h2 class="mb-1">
+                       <i class="bi bi-file-earmark-code"></i> Добавленные из JSON
+                   </h2>
+                   <p class="text-subdued small mb-0">
+                       Импортированные треки — {{ tracks|length }} шт.
+                   </p>
+                </div>
 
-            {% for track in tracks %}
-            <div class="glass-card p-3 d-flex align-items-center mb-3">
-                <div style="width: 60px; height: 60px; border-radius: 12px; overflow: hidden; margin-right: 15px; flex-shrink: 0;">
-                    <img src="{{ url_for('static', filename=track.cover_path) }}"
-                         style="width: 100%; height: 100%; object-fit: cover;"
-                         onerror="this.src='{{ default_cover_url }}'">
+                <span class="badge bg-secondary">Импорт из JSON — скоро</span>
+
+            </div>
+
+            <!-- Список треков -->
+            {% if tracks %}
+            <div class="row g-3">
+                {% for track in tracks %}
+                <div class="col-md-6">
+                    <div class="glass-card p-3 d-flex align-items-center"
+                         data-track-id="{{ track.id }}"
+                         data-track-url="{{ url_for('static', filename=track.file_path) }}"
+                         data-track-title="{{ track.title }}"
+                         data-track-artist="{{ track.artist }}"
+                         data-track-cover="{{ url_for('static', filename=track.cover_path) }}">
+
+                        <!-- Обложка -->
+                        <div style="width: 60px; height: 60px; border-radius: 12px; overflow: hidden; margin-right: 15px; flex-shrink: 0;">
+                            <img src="{{ url_for('static', filename=track.cover_path) }}"
+                                 alt="{{ track.title }}"
+                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.src='{{ default_cover_url }}'">
+                        </div>
+
+                        <!-- Инфо -->
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <h6 class="mb-0 fw-bold text-truncate">{{ track.title }}</h6>
+                            <small class="text-subdued d-block text-truncate">{{ track.artist }} • {{ track.genre }}</small>
+                            <small class="text-subdued">
+                                <i class="bi bi-clock"></i> {{ track.duration | format_duration }}
+                                • <i class="bi bi-headphones"></i> {{ track.plays }}
+                            </small>
+                        </div>
+
+                        <!-- Play -->
+                        <button class="btn btn-sm btn-outline-light rounded-circle"
+                                style="border-color: var(--neon-blue); color: var(--neon-blue); width: 35px; height: 35px; padding: 0; flex-shrink: 0;"
+                                onclick="addToQueue(
+                                    '{{ url_for('static', filename=track.file_path) }}',
+                                    '{{ track.title|e }}',
+                                    '{{ track.artist|e }}',
+                                    '{{ url_for('static', filename=track.cover_path) }}',
+                                    true
+                                )">
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="mb-0 fw-bold">{{ track.title }}</h6>
-                    <small class="text-subdued">{{ track.artist }} • {{ track.genre }}</small>
-                </div>
-                <button class="btn btn-outline-light btn-sm rounded-circle"
-                        onclick="addToQueue('{{ url_for('static', filename=track.file_path) }}', '{{ track.title|e }}', '{{ track.artist|e }}', '{{ url_for('static', filename=track.cover_path) }}', true)">
-                    <i class="bi bi-play-fill"></i>
-                </button>
+                {% endfor %}
             </div>
             {% else %}
-            <p class="text-subdued text-center">Нет треков, добавленных из JSON</p>
-            {% endfor %}
+            <div class="glass-card p-5 text-center">
+                <i class="bi bi-music-note-beamed fs-1" style="color: var(--neon-blue); opacity: 0.5;"></i>
+                <h5 class="fw-light mt-3 mb-2">Пока нет треков из JSON</h5>
+                <p class="text-subdued mb-3 small">
+                    Импортируй треки через JSON — они появятся здесь.
+                </p>
+                {% if current_user.is_authenticated and current_user.id == user.id %}
+                    <a href="{{ url_for('upload_track') }}" class="btn btn-neon">
+                        <i class="bi bi-cloud-upload"></i> Загрузить трек
+                    </a>
+                {% endif %}
+            </div>
+            {% endif %}
 
         </div>
     </div>

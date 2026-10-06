@@ -10,6 +10,8 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 </head>
 
 <body>
@@ -74,8 +76,6 @@
             <a href="#" class="text-base text-decoration-none">About</a>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- ===== ГЛОБАЛЬНЫЙ МИНИ-ПЛЕЕР ===== -->
     <div id="global-player" class="global-player hidden">
@@ -433,6 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
     refreshSearchTracks();
     initLibraryDragDrop();
     setTimeout(initVisualizer, 200);
+    setTimeout(renderStatsCharts, 200);
 });
 
 
@@ -523,15 +524,28 @@ function playTrack(url, title, artist, cover) {
     let coverUrl = '{{ default_cover_url }}';
 
     if (trackCard) {
-        // Сначала пробуем взять из data-атрибута
+        // Обложка
         if (trackCard.dataset.trackCover) {
             coverUrl = trackCard.dataset.trackCover;
         } else {
-            // Если нет — ищем img внутри карточки
             const img = trackCard.querySelector('img');
             if (img && img.src) {
                 coverUrl = img.src;
             }
+        }
+
+        // ===== УВЕЛИЧЕНИЕ ПРОСЛУШИВАНИЙ =====
+        if (trackCard.dataset.trackId) {
+            fetch(`/api/increment_plays/${trackCard.dataset.trackId}`, {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`▶ Прослушиваний: ${data.plays}`);
+                }
+            })
+            .catch(err => console.warn('Не удалось увеличить plays:', err));
         }
     }
 
@@ -586,7 +600,6 @@ function playTrack(url, title, artist, cover) {
         duration.textContent = formatTime(audio.duration);
         document.getElementById('fs-duration').textContent = formatTime(audio.duration);
     };
-
 }
 
         // === 3. ПЕРЕКЛЮЧЕНИЕ ===
@@ -784,6 +797,7 @@ async function loadPage(url) {
             }
 
             setTimeout(initLibraryDragDrop, 300)
+            setTimeout(renderStatsCharts, 300);
 
             // Визуализатор
             setTimeout(() => {
@@ -984,6 +998,22 @@ if (audio.src && !audio.paused) {
 
 
 // Скрипт микс блока
+// ===== ВОСПРОИЗВЕДЕНИЕ ВСЕЙ БИБЛИОТЕКИ =====
+function playLibrary() {
+    const rows = document.querySelectorAll('#library-tbody tr[data-track-url]');
+    if (rows.length === 0) return;
+
+    rows.forEach((row, idx) => {
+        addToQueue(
+            row.dataset.trackUrl,
+            row.dataset.trackTitle,
+            row.dataset.trackArtist,
+            row.dataset.trackCover || '',
+            idx === 0  // только первый трек запускаем сразу
+        );
+    });
+}
+
 // ===== ФУНКЦИИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ =====
 function playRandomMix() {
     const tracks = document.querySelectorAll('[data-track-url]');
@@ -1113,6 +1143,143 @@ document.addEventListener('keydown', function(e) {
         if (si) si.blur();
     }
 });
+
+
+// ===== ГРАФИКИ СТАТИСТИКИ =====
+let statsCharts = []; // Храним созданные графики, чтобы удалять их при повторном рендере
+
+function renderStatsCharts() {
+    // 1. Проверяем, что мы на странице статистики
+    const dataEl = document.getElementById('stats-data');
+    if (!dataEl) return;
+
+    // 2. Проверяем, что Chart.js загружен
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js не загружен');
+        return;
+    }
+
+        // ===== ОПТИМИЗАЦИЯ =====
+    Chart.defaults.animation.duration = 400;  // По умолчанию 1000 — уменьшим в 2.5 раза
+    Chart.defaults.animation.easing = 'easeOutQuart';
+
+    // 3. Удаляем старые графики (если есть) — чтобы не было дублей при SPA
+    statsCharts.forEach(chart => chart.destroy());
+    statsCharts = [];
+
+    // 4. Читаем данные из data-атрибутов
+    const genreLabels = JSON.parse(dataEl.dataset.genreLabels || '[]');
+    const genreCounts = JSON.parse(dataEl.dataset.genreCounts || '[]');
+    const topTracksLabels = JSON.parse(dataEl.dataset.topTracksLabels || '[]');
+    const topTracksCounts = JSON.parse(dataEl.dataset.topTracksCounts || '[]');
+    const longestLabels = JSON.parse(dataEl.dataset.longestLabels || '[]');
+    const longestData = JSON.parse(dataEl.dataset.longestData || '[]');
+
+    // 5. Цвета из Config (передаются через Jinja в base.html)
+    const CHART_COLORS = {{ Config.CHART_COLORS | tojson }};
+    const BORDER_COLOR = '{{ Config.CHART_BORDER_COLOR }}';
+    const BAR_ALPHA = {{ Config.CHART_BAR_ALPHA }};
+    const BAR_BORDER_WIDTH = {{ Config.CHART_BAR_BORDER_WIDTH }};
+    const BAR_RADIUS = {{ Config.CHART_BAR_RADIUS }};
+    const LINE_WIDTH = {{ Config.CHART_LINE_WIDTH }};
+    const LINE_TENSION = {{ Config.CHART_LINE_TENSION }};
+    const LINE_FILL_ALPHA = {{ Config.CHART_LINE_FILL_ALPHA }};
+    const POINT_RADIUS = {{ Config.CHART_POINT_RADIUS }};
+    const POINT_HOVER_RADIUS = {{ Config.CHART_POINT_HOVER_RADIUS }};
+
+    // 6. Общие настройки
+    Chart.defaults.color = '{{ Config.CHART_TEXT_COLOR }}';
+    Chart.defaults.borderColor = '{{ Config.CHART_GRID_COLOR }}';
+    Chart.defaults.font.family = '{{ Config.CHART_FONT_FAMILY }}';
+
+    // 7. Хелпер: hex → rgba
+    function withAlpha(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    // 8. График 1: Жанры (круговая)
+    const genreCtx = document.getElementById('genreChart');
+    if (genreCtx) {
+        statsCharts.push(new Chart(genreCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: genreLabels,
+                datasets: [{
+                    data: genreCounts,
+                    backgroundColor: CHART_COLORS,
+                    borderWidth: BAR_BORDER_WIDTH,
+                    borderColor: BORDER_COLOR
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { padding: 15, font: { size: 12 } }
+                    }
+                }
+            }
+        }));
+    }
+
+    // 9. График 2: Топ треков (столбчатая)
+    const topCtx = document.getElementById('topTracksChart');
+    if (topCtx) {
+        statsCharts.push(new Chart(topCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: topTracksLabels,
+                datasets: [{
+                    label: 'Прослушивания',
+                    data: topTracksCounts,
+                    backgroundColor: withAlpha(CHART_COLORS[0], BAR_ALPHA),
+                    borderColor: CHART_COLORS[0],
+                    borderWidth: BAR_BORDER_WIDTH,
+                    borderRadius: BAR_RADIUS
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        }));
+    }
+
+    // 11. График 4: Самые длинные (горизонтальная)
+    const longestCtx = document.getElementById('longestChart');
+    if (longestCtx) {
+        statsCharts.push(new Chart(longestCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: longestLabels,
+                datasets: [{
+                    label: 'Длительность (секунды)',
+                    data: longestData,
+                    backgroundColor: withAlpha(CHART_COLORS[2], BAR_ALPHA),
+                    borderColor: CHART_COLORS[2],
+                    borderWidth: BAR_BORDER_WIDTH,
+                    borderRadius: BAR_RADIUS
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true } }
+            }
+        }));
+    }
+
+    console.log(`📊 Отрисовано ${statsCharts.length} графика(ов)`);
+}
 
 </script>
 </body>

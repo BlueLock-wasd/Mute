@@ -149,19 +149,4 @@
         </div>
     </div>
 </div>
-
-<script>
-function playLibrary() {
-    const rows = document.querySelectorAll('#library-tbody tr[data-track-url]');
-    rows.forEach((row, idx) => {
-        addToQueue(
-            row.dataset.trackUrl,
-            row.dataset.trackTitle,
-            row.dataset.trackArtist,
-            row.dataset.trackCover || '',
-            idx === 0
-        );
-    });
-}
-</script>
 {% endblock %}
