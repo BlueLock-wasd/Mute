@@ -4,15 +4,12 @@ from werkzeug.security import generate_password_hash
 from config import Config
 
 with app.app_context():
-    # Удаляем старые таблицы (если есть)
     db.drop_all()
     print("✅ Старые таблицы удалены")
 
-    # Создаём новые
     db.create_all()
     print("✅ Новые таблицы созданы")
 
-    # Добавляем админа
     admin = User(
         username=Config.ADMIN_USERNAME,
         email=Config.ADMIN_EMAIL,

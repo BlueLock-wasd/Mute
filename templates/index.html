@@ -5,16 +5,12 @@
 {% block content %}
 <div class="container">
 
-    <!-- ===== HERO-СЕКЦИЯ ===== -->
     <div class="row mt-2 mb-5 text-center position-relative">
         <div class="col-12">
 
-            <!-- Реактивная аудиоволна -->
             <canvas id="visualizerCanvas" style="border-radius: 50px;"></canvas>
-
             <h2 class="mt-5 fw-light">Your Personalized Sonic Journey Begins.</h2>
 
-           <!-- ===== ИНТЕРАКТИВНЫЙ ПОИСК ===== -->
             <div class="search-wrapper mt-4 position-relative">
                 <input type="text"
                        class="search-input"
@@ -47,7 +43,6 @@
     </div>
 
     {% if current_user.is_authenticated and user_tracks %}
-    <!-- ===== ИЗ МОЕЙ БИБЛИОТЕКИ ===== -->
     <div class="row mb-5">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-3">

@@ -23,6 +23,7 @@ login_manager.login_view = 'login'
 
 MOSCOW_TZ = timezone(timedelta(hours=Config.TIMEZONE_OFFSET))
 
+
 @app.context_processor
 def inject_config():
     return {
@@ -34,12 +35,10 @@ def inject_config():
 
 
 def get_now_str():
-    """Текущее время в Москве в формате из конфига."""
     return datetime.now(MOSCOW_TZ).strftime(Config.TIMESTAMP_FORMAT)
 
 
 def extensions_to_str(exts):
-    """Превращает set расширений в строку 'PNG, JPG, GIF'."""
     return ', '.join(sorted(e.upper() for e in exts))
 
 
@@ -67,6 +66,19 @@ def format_total_time(seconds):
     if h > 0:
         return f'{h}ч {m}м'
     return f'{m}м'
+
+
+@app.template_filter('format_duration')
+def format_duration(seconds):
+    if not seconds:
+        return Config.DURATION_ZERO
+    h = seconds // Config.SECONDS_PER_HOUR
+    m = (seconds % Config.SECONDS_PER_HOUR) // Config.SECONDS_PER_MINUTE
+    s = seconds % Config.SECONDS_PER_MINUTE
+    if h > 0:
+        return f'{h}:{m:02d}:{s:02d}'
+    return f'{m}:{s:02d}'
+
 
 @app.route('/')
 def index():
@@ -325,6 +337,7 @@ def user_stats(username):
                            user=user,
                            total_tracks=total_tracks,
                            total_plays=total_plays,
+                           total_duration=total_duration,
                            hours=hours,
                            minutes=minutes,
                            avg_duration=avg_duration,

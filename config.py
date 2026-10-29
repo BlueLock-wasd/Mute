@@ -121,4 +121,4 @@ class Config:
     CHART_POINT_HOVER_RADIUS = 8    # Размер точек при наведении
 
     # ===== Месяцы для графика динамики =====
-    CHART_MONTHS_COUNT = 12         # Сколько месяцев показывать
+    CHART_MONTHS_COUNT = 12
