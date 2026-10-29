@@ -4,7 +4,7 @@ venv/
 env/
 
 # Python
-__pycache__/
+__pycache__
 *.pyc
 *.pyo
 *.pyd
@@ -16,7 +16,7 @@ __pycache__/
 .env.*.local
 
 # PyCharm
-.idea/
+.idea
 
 # VS Code
 .vscode/
